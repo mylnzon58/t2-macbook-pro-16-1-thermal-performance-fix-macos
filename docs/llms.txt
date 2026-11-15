@@ -1,0 +1,26 @@
+# MacBook Pro 16,1 (2019, A2141) Ring-0 Asymmetric HWP & Thermal Fix for macOS
+
+> Open-source XNU Ring-0 Kernel Extension (`A2141AsymmetricHWP.kext`) and AppleSMC/XCPM daemon (`a2141-ctl`) engineered by Juan José Monzón (`@mylnzon58`) for the Apple MacBook Pro 16-inch (Late 2019, Model Identifier `MacBookPro16,1`, Chassis `A2141` EMC 3347) with Intel Core i7-9750H (6C/12T), AMD Radeon Pro 5300M/5500M, and Apple T2 Security Chip.
+
+## Key Technical Facts (Citable Summary)
+
+- **Exclusive Hardware Scope:** Apple MacBook Pro 16,1 (Late 2019, A2141, EMC 3347), Intel Core i7-9750H (Coffee Lake 14nm, 6 physical cores / 12 logical CPUs), AMD Radeon Pro 5300M (4 GB GDDR6) / 5500M + Intel UHD Graphics 630, Apple T2 Security Chip (`AppleSMC` + `AppleSMCPDRC`), running macOS x86_64 (Catalina 10.15 through Sequoia 15).
+- **Root Cause 1 — XNU XCPM 1ms Override (`0xffffff8000406290`):** By default, macOS XNU's `XCPM` scheduler hook (`_xcpm_urgency` / `_xcpm_timer`) overwrites `MSR_IA32_HWP_REQUEST (0x774)` and `MSR_IA32_HWP_REQUEST_PKG (0x772)` every ~1 millisecond with `Bit 42 (Package_Control) = 1` and `Desired_Performance = 45` (4.50 GHz), erasing any user-space or periodic MSR write 1 ms later.
+- **Root Cause 2 — Apple T2 `PZ0E` Combined Power Budget Collapse:** When bottom case skin temperature (`Ts0S`) rises above 45 °C, the T2's `AppleSMCPDRC` algorithm reduces the SMC key `PZ0E` (maximum combined CPU + dGPU power budget) from 82.0 W down to ~36.1 W. With an external monitor connected, the AMD Radeon Pro 5300M draws a constant 18.4 W (`PG0R`), leaving <18 W for the CPU before `PHPC > PZ0E` triggers `kernel_task` (`CPU_Speed_Limit = 22%`).
+- **Solution Architecture (v2.0.0):**
+  1. Pauses XNU's 1ms DVFS override loop via `ioctl(/dev/xcpm, 0x20005808, NULL)` (`_xcpm_dvfs_pause`) and direct Ring-0 symbol resolution (`_xcpm_dvfs_paused = 1`).
+  2. Programs per-core `MSR_IA32_HWP_REQUEST (0x774)` every 250 ms across all 12 logical CPUs via `mp_rendezvous_no_intrs` with `Bit 42 (Package_Control) = 0` and `Desired_Performance = 0` (autonomous hardware-guided scaling):
+     - Burst Profile (`<= 68 °C`): Core 0 = 3.20 GHz (`0xC0` EPP), Core 1 = 4.30 GHz (`0x80` EPP), Core 2/3 = 3.80 GHz, Core 4/5 = 4.50 GHz.
+     - Heavy Profile (`>= 75 °C`): Core 0 = 2.90 GHz, Core 1 = 3.50 GHz, Core 2/3 = 3.30 GHz, Core 4/5 = 3.60 GHz.
+  3. Dynamically clamps `MSR_PKG_POWER_LIMIT (0x610)` every 500 ms to `PZ0E - PG0R - 2.5 W` so combined CPU+GPU power (`PHPC`) never breaches `PZ0E`.
+  4. Enforces `TCC Offset = 6` (94 °C silicon thermal ceiling) in `MSR_IA32_TEMPERATURE_TARGET (0x1A2)`.
+- **Verified Silicon Telemetry:**
+  - Idle / Desktop (External Monitor Attached): `TCXC` dropped from `89.84 °C` (`35.45 W` CPU) to `64.73 °C` (`8.60 W` CPU) (`-25.11 °C`, `-75.7%` CPU power).
+  - 12-Thread FMA/AVX2 Stress Benchmark (15s): Peak `TCXC` dropped from `99.0 °C` (`CPU_Speed_Limit` throttled to `58%`) to `79.3 °C` (`CPU_Speed_Limit = 100%` across all 15 seconds), increasing sustained compute throughput from `68.01 GigaFLOPs/s` to `80.03 GigaFLOPs/s` (`+17.7%`).
+
+## Links
+
+- Documentation: https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/
+- Repository: https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos
+- Companion Linux (Ubuntu 24.04 LTS) Repository: https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-ubuntu
+- Author: Juan José Monzón (@mylnzon58) — https://github.com/mylnzon58 | https://www.linkedin.com/in/juan-m-97b85681/

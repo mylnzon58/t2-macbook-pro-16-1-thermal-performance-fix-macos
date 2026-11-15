@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MacBook Pro 16,1 (A2141) macOS Thermal &amp; Ring-0 HWP Driver</title>
+  <meta name="description" content="Driver Ring-0 (.kext) y demonio AppleSMC para MacBook Pro 16,1 (2019, A2141, Core i7-9750H). Reduce 25 °C en reposo y 19.7 °C en carga AVX2 sin throttling." />
+  <meta name="author" content="Juan José Monzón (@mylnzon58)" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/" />
+  <link rel="alternate" hreflang="es" href="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/" />
+  <link rel="alternate" hreflang="en" href="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/?lang=en" />
+  <link rel="alternate" hreflang="x-default" href="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="mylnzon58 Systems Engineering" />
+  <meta property="og:locale" content="es_AR" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:title" content="MacBook Pro 16,1 (A2141) macOS Ring-0 Asymmetric HWP &amp; Thermal Fix" />
+  <meta property="og:description" content="Solución en Ring-0 (IOKit Kext + /dev/xcpm pause + AppleSMC PZ0E) para Intel Core i7-9750H y Radeon Pro 5300M. De 89.8 °C a 64.7 °C en reposo y +17.7% GFLOPs/s en estrés AVX2." />
+  <meta property="og:url" content="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/" />
+  <meta property="og:image" content="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/og-card-a2141-macos.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Telemetría real del driver Ring-0 A2141AsymmetricHWP en MacBook Pro 16,1 (A2141) por mylnzon58" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="MacBook Pro 16,1 (A2141) macOS Ring-0 Asymmetric HWP &amp; Thermal Fix" />
+  <meta name="twitter:description" content="Extensión de kernel XNU en Ring-0 y control proactivo de presupuesto PZ0E para MacBook Pro 16,1 (2019, A2141) por Juan José Monzón (@mylnzon58)." />
+  <meta name="twitter:image" content="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/og-card-a2141-macos.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Person",
+        "@id": "https://github.com/mylnzon58#person",
+        "name": "Juan José Monzón",
+        "alternateName": "mylnzon58",
+        "url": "https://github.com/mylnzon58",
+        "jobTitle": "Full Stack Developer & Systems Engineer",
+        "sameAs": [
+          "https://github.com/mylnzon58",
+          "https://www.linkedin.com/in/juan-m-97b85681/",
+          "https://www.instagram.com/juanjoclassic/",
+          "https://www.patreon.com/JuanjoClassic",
+          "https://tecito.app/juanjoclassic"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/#website",
+        "url": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/",
+        "name": "A2141AsymmetricHWP macOS Ring-0 Driver Documentation",
+        "publisher": {
+          "@id": "https://github.com/mylnzon58#person"
+        },
+        "inLanguage": ["es", "en"]
+      },
+      {
+        "@type": "SoftwareSourceCode",
+        "@id": "https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos#software",
+        "name": "A2141AsymmetricHWP",
+        "version": "2.0.0",
+        "description": "Ring-0 XNU Kernel Extension (.kext) and AppleSMC/XCPM daemon for Apple MacBook Pro 16,1 (2019, A2141, Intel Core i7-9750H, AMD Radeon Pro 5300M/5500M) on macOS.",
+        "codeRepository": "https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos",
+        "programmingLanguage": ["C++", "C", "Shell"],
+        "runtimePlatform": "macOS XNU Kernel Ring-0 (IOKit) x86_64",
+        "operatingSystem": "macOS 10.15 Catalina through macOS 15 Sequoia (x86_64)",
+        "license": "https://opensource.org/licenses/MIT",
+        "author": {
+          "@id": "https://github.com/mylnzon58#person"
+        }
+      },
+      {
+        "@type": "TechArticle",
+        "@id": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/#article",
+        "headline": "MacBook Pro 16,1 (A2141) macOS Thermal & Ring-0 HWP Driver",
+        "description": "Desensamblado del kernel XNU (XCPM 0xffffff8000406290), extensión Ring-0 para techos HWP asimétricos por núcleo (MSR 0x774) y sincronización RAPL con el presupuesto térmico PZ0E del chip Apple T2.",
+        "image": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/og-card-a2141-macos.png",
+        "datePublished": "2026-11-15T00:00:00-03:00",
+        "dateModified": "2026-11-15T03:45:00-03:00",
+        "author": {
+          "@id": "https://github.com/mylnzon58#person"
+        },
+        "publisher": {
+          "@id": "https://github.com/mylnzon58#person"
+        },
+        "about": {
+          "@id": "https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos#software"
+        },
+        "mainEntityOfPage": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "mylnzon58",
+            "item": "https://github.com/mylnzon58"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "A2141 macOS Ring-0 Driver",
+            "item": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/"
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg: #0c0a08;
+      --surface: #181512;
+      --surface-alt: #211d19;
+      --stage: #1f1a14;
+      --ink: #ffffff;
+      --muted: #8f8a84;
+      --accent: #c9a45a;
+      --accent-ink: #0c0a08;
+      --good: #4a9e72;
+      --warn: #c45240;
+
+      --step-small: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
+      --step-body: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+      --step-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+      --step-head: clamp(2rem, 1.3rem + 3.2vw, 3.75rem);
+      --step-hero: clamp(2.5rem, 1.8rem + 3.4vw, 4.5rem);
+
+      --margin-x: clamp(1.25rem, 3vw, 2.5rem);
+      --section-gap: clamp(7.5rem, 11vw, 12.5rem);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      background-color: var(--bg);
+      color: var(--ink);
+      font-family: "Jost", -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--ink);
+      overflow-x: hidden;
+      font-variant-numeric: tabular-nums;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    a:hover {
+      opacity: 0.82;
+    }
+
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: "Jost", sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 0.94;
+      text-wrap: balance;
+      color: var(--ink);
+    }
+
+    p, li {
+      font-size: var(--step-body);
+      line-height: 1.52;
+      color: var(--ink);
+      text-wrap: pretty;
+    }
+
+    /* Navigation: plain row, wordmark left, links right */
+    .top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px var(--margin-x);
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    .wordmark {
+      font-size: var(--step-body);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+
+    .nav-links a {
+      font-size: var(--step-small);
+      color: var(--muted);
+    }
+
+    .nav-links a:hover {
+      color: var(--ink);
+    }
+
+    .btn-primary {
+      display: inline-block;
+      background-color: var(--accent);
+      color: var(--accent-ink);
+      font-family: "Jost", sans-serif;
+      font-size: var(--step-small);
+      font-weight: 700;
+      padding: 12px 22px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.16s ease, opacity 0.16s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      opacity: 0.94;
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .lang-toggle {
+      background-color: var(--surface);
+      color: var(--ink);
+      border: none;
+      padding: 8px 14px;
+      font-family: "Jost", sans-serif;
+      font-size: var(--step-small);
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.16s ease, background-color 0.16s ease;
+    }
+
+    .lang-toggle.active {
+      background-color: var(--accent);
+      color: var(--accent-ink);
+      font-weight: 700;
+    }
+
+    /* Grid layout */
+    .grid-12 {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 24px;
+      padding: 0 var(--margin-x);
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    /* Hero: Fragment on a shaped stage */
+    .hero-section {
+      position: relative;
+      min-height: 88vh;
+      padding-top: 48px;
+      margin-bottom: var(--section-gap);
+    }
+
+    .hero-copy {
+      grid-column: 1 / 7;
+      padding-top: 24px;
+    }
+
+    .hero-copy h1 {
+      font-size: var(--step-hero);
+      max-width: 15ch;
+      margin-bottom: 24px;
+    }
+
+    .hero-lead {
+      font-size: var(--step-body);
+      color: var(--ink);
+      max-width: 44ch;
+      margin-bottom: 28px;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .text-link {
+      font-size: var(--step-body);
+      font-weight: 500;
+      color: var(--accent);
+    }
+
+    .hero-stage {
+      grid-column: 5 / 13;
+      background-color: var(--stage);
+      clip-path: polygon(56px 0, 100% 0, 100% 100%, 0 100%, 0 56px);
+      padding: 48px 40px 40px 48px;
+      margin-top: 24px;
+    }
+
+    /* Interactive Live Ring-0 Fragment (data-ui) */
+    .telemetry-fragment {
+      background-color: var(--bg);
+      padding: 24px;
+      font-variant-numeric: tabular-nums;
+      font-size: 14px;
+      color: var(--ink);
+    }
+
+    .frag-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      background-color: var(--surface);
+      padding: 14px 16px;
+    }
+
+    .frag-modes {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .frag-btn {
+      background-color: var(--bg);
+      color: var(--muted);
+      border: none;
+      padding: 7px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+
+    .frag-btn.is-selected {
+      background-color: var(--accent);
+      color: var(--accent-ink);
+    }
+
+    .frag-metrics-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .frag-cell {
+      background-color: var(--surface);
+      padding: 12px;
+    }
+
+    .frag-cell-label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .frag-cell-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .frag-cores {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+
+    .core-tile {
+      background-color: var(--surface);
+      padding: 10px;
+    }
+
+    .core-tile-id {
+      font-size: 13px;
+      color: var(--muted);
+      display: block;
+    }
+
+    .core-tile-temp {
+      font-size: 17px;
+      font-weight: 700;
+      display: block;
+      margin: 4px 0;
+    }
+
+    .core-tile-mhz {
+      font-size: 13px;
+      color: var(--accent);
+      display: block;
+    }
+
+    /* Section 1: Hardware Scope Strip (proof) */
+    .scope-strip {
+      padding: 80px var(--margin-x);
+      max-width: 1440px;
+      margin: 0 auto var(--section-gap);
+      background-color: var(--surface);
+    }
+
+    .scope-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+
+    .scope-header h2 {
+      font-size: var(--step-head);
+      max-width: 16ch;
+    }
+
+    .scope-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .scope-item {
+      background-color: var(--bg);
+      padding: 24px;
+    }
+
+    .scope-item strong {
+      display: block;
+      font-size: var(--step-lead);
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .scope-item p {
+      font-size: var(--step-small);
+      color: var(--ink);
+    }
+
+    /* Section 2: Guided Installation Flow (Hick's Law Call & Response) */
+    .flow-section {
+      margin-bottom: var(--section-gap);
+    }
+
+    .flow-col {
+      grid-column: 3 / 11;
+    }
+
+    .flow-col h2 {
+      font-size: var(--step-head);
+      max-width: 16ch;
+      margin-bottom: 24px;
+    }
+
+    .flow-arrow-chain {
+      background-color: var(--surface);
+      padding: 20px 24px;
+      font-size: var(--step-body);
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 56px;
+    }
+
+    .exchange-block {
+      margin-bottom: 72px;
+    }
+
+    .exchange-title {
+      font-size: var(--step-lead);
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    .code-call {
+      background-color: var(--surface);
+      padding: 20px 24px;
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .code-call pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--ink);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .copy-action {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background-color: var(--accent);
+      color: var(--accent-ink);
+      border: none;
+      padding: 6px 12px;
+      font-family: "Jost", sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .code-response {
+      margin-left: 48px;
+      background-color: var(--surface-alt);
+      padding: 18px 22px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13.5px;
+      color: var(--ink);
+    }
+
+    /* Section 3: Interactive Kernel Switches (Sentences with switches) */
+    .switches-section {
+      margin-bottom: var(--section-gap);
+    }
+
+    .switch-band {
+      padding: 38px var(--margin-x);
+      background-color: var(--bg);
+      transition: background-color 0.2s ease;
+    }
+
+    .switch-band.is-on {
+      background-color: var(--surface);
+    }
+
+    .switch-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      align-items: center;
+      gap: 20px;
+    }
+
+    .switch-text {
+      grid-column: 1 / 10;
+    }
+
+    .switch-statement {
+      font-size: clamp(1.35rem, 2.2vw, 2.1rem);
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--muted);
+    }
+
+    .switch-band.is-on .switch-statement {
+      color: var(--ink);
+    }
+
+    .switch-consequence {
+      font-size: var(--step-body);
+      color: var(--accent);
+      margin-top: 10px;
+      display: none;
+    }
+
+    .switch-band.is-on .switch-consequence {
+      display: block;
+    }
+
+    .switch-ctrl-wrap {
+      grid-column: 10 / 13;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .kernel-toggle {
+      width: 68px;
+      height: 36px;
+      background-color: var(--surface-alt);
+      border: none;
+      position: relative;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .kernel-toggle-knob {
+      display: block;
+      width: 28px;
+      height: 28px;
+      background-color: var(--muted);
+      transition: transform 0.18s ease, background-color 0.18s ease;
+    }
+
+    .switch-band.is-on .kernel-toggle {
+      background-color: var(--accent);
+    }
+
+    .switch-band.is-on .kernel-toggle-knob {
+      transform: translateX(32px);
+      background-color: var(--accent-ink);
+    }
+
+    /* Section 4: Silicon Telemetry Plates & Benchmark Table */
+    .plates-section {
+      margin-bottom: var(--section-gap);
+    }
+
+    .plates-header {
+      grid-column: 1 / 13;
+      margin-bottom: 36px;
+    }
+
+    .plates-header h2 {
+      font-size: var(--step-head);
+      max-width: 15ch;
+      margin-bottom: 16px;
+    }
+
+    .plates-grid {
+      grid-column: 1 / 13;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+
+    .plate-card {
+      background-color: var(--surface);
+      padding: 20px;
+    }
+
+    .plate-card img {
+      width: 100%;
+      height: auto;
+      display: block;
+      margin-bottom: 16px;
+    }
+
+    .plate-card p {
+      font-size: var(--step-small);
+      color: var(--muted);
+    }
+
+    .shutter-reveal {
+      clip-path: inset(0 0 0 0);
+      transition: clip-path 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .telemetry-table-wrap {
+      grid-column: 1 / 13;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: var(--surface);
+      font-size: var(--step-body);
+    }
+
+    th, td {
+      padding: 16px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--bg);
+    }
+
+    th {
+      background-color: var(--surface-alt);
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .val-bad {
+      color: var(--warn);
+    }
+
+    .val-good {
+      color: var(--good);
+      font-weight: 700;
+    }
+
+    /* Section 5: Question Index, One Answer (FAQ) */
+    .faq-section {
+      margin-bottom: var(--section-gap);
+    }
+
+    .faq-list-col {
+      grid-column: 1 / 6;
+    }
+
+    .faq-list-col h2 {
+      font-size: var(--step-head);
+      max-width: 14ch;
+      margin-bottom: 28px;
+    }
+
+    .faq-q-btn {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      padding: 14px 0;
+      font-family: "Jost", sans-serif;
+      font-size: var(--step-body);
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.15s ease, transform 0.15s ease;
+    }
+
+    .faq-dot {
+      width: 10px;
+      height: 10px;
+      background-color: var(--muted);
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+
+    .faq-q-btn.is-active {
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .faq-q-btn.is-active .faq-dot {
+      background-color: var(--accent);
+    }
+
+    .faq-answer-col {
+      grid-column: 7 / 13;
+      position: sticky;
+      top: 120px;
+      align-self: start;
+      background-color: var(--surface);
+      padding: 36px;
+    }
+
+    .faq-answer-text {
+      font-size: var(--step-lead);
+      line-height: 1.42;
+      color: var(--ink);
+      max-width: 38ch;
+    }
+
+    /* Section 6: Open Source Sponsorship & Author Split (CTA) */
+    .sponsor-section {
+      background-color: var(--surface);
+      padding: 80px 0;
+      margin-bottom: 48px;
+    }
+
+    .sponsor-left {
+      grid-column: 1 / 6;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .sponsor-left h2 {
+      font-size: var(--step-head);
+      max-width: 13ch;
+      margin-bottom: 20px;
+    }
+
+    .sponsor-right {
+      grid-column: 7 / 13;
+      background-color: var(--bg);
+      padding: 36px;
+    }
+
+    .sponsor-links-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .sponsor-link-box {
+      background-color: var(--surface);
+      padding: 18px 20px;
+      display: block;
+      transition: transform 0.16s ease, background-color 0.16s ease;
+    }
+
+    .sponsor-link-box:hover {
+      transform: translateY(-2px);
+      background-color: var(--surface-alt);
+    }
+
+    .sponsor-link-box strong {
+      display: block;
+      font-size: var(--step-body);
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .sponsor-link-box span {
+      font-size: var(--step-small);
+      color: var(--ink);
+    }
+
+    /* Section 7: Footer of Tiles */
+    .footer-board {
+      padding: 0 12px 12px;
+      max-width: 1440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 8px;
+    }
+
+    .f-tile {
+      background-color: var(--surface);
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 200px;
+    }
+
+    .f-tile-statement { grid-column: 1 / 5; }
+    .f-tile-nav       { grid-column: 5 / 8; }
+    .f-tile-arch      { grid-column: 8 / 10; }
+    .f-tile-contact   { grid-column: 10 / 13; }
+
+    .f-tile-wordmark {
+      grid-column: 1 / 9;
+      background-color: var(--ink);
+      color: var(--bg);
+      min-height: 240px;
+      align-items: flex-start;
+      justify-content: flex-end;
+    }
+
+    .f-tile-wordmark span {
+      font-size: clamp(2.6rem, 6.5vw, 5.5rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 0.9;
+      color: var(--bg);
+    }
+
+    .f-tile-cta {
+      grid-column: 9 / 13;
+      background-color: var(--accent);
+      color: var(--accent-ink);
+      min-height: 240px;
+    }
+
+    .f-tile-cta span {
+      font-size: var(--step-lead);
+      font-weight: 700;
+      color: var(--accent-ink);
+    }
+
+    /* Scroll entrance motion */
+    .reveal-item {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+
+    .reveal-item.will-animate {
+      opacity: 0;
+      transform: translateY(22px);
+    }
+
+    .reveal-item.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Language switching */
+    .lang-en { display: none; }
+    body.mode-en .lang-es { display: none; }
+    body.mode-en .lang-en { display: block; }
+    body.mode-en span.lang-en, body.mode-en a.lang-en { display: inline; }
+
+    @media (max-width: 960px) {
+      .hero-copy { grid-column: 1 / 13; }
+      .hero-stage { grid-column: 1 / 13; padding: 24px 16px; }
+      .frag-metrics-row { grid-template-columns: repeat(2, 1fr); }
+      .frag-cores { grid-template-columns: repeat(3, 1fr); }
+      .scope-grid { grid-template-columns: repeat(2, 1fr); }
+      .flow-col { grid-column: 1 / 13; }
+      .code-response { margin-left: 0; }
+      .plates-grid { grid-template-columns: 1fr; }
+      .faq-list-col { grid-column: 1 / 13; }
+      .faq-answer-col { grid-column: 1 / 13; position: static; margin-top: 20px; }
+      .sponsor-left { grid-column: 1 / 13; margin-bottom: 28px; }
+      .sponsor-right { grid-column: 1 / 13; }
+      .f-tile-statement, .f-tile-nav, .f-tile-arch, .f-tile-contact,
+      .f-tile-wordmark, .f-tile-cta { grid-column: 1 / 13; min-height: 160px; }
+    }
+
+    @media (max-width: 540px) {
+      .scope-grid { grid-template-columns: 1fr; }
+      .sponsor-links-grid { grid-template-columns: 1fr; }
+      .switch-text { grid-column: 1 / 9; }
+      .switch-ctrl-wrap { grid-column: 9 / 13; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="top-nav">
+    <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos" class="wordmark">mylnzon58 / A2141-Ring0</a>
+    <nav class="nav-links" aria-label="Primary Navigation">
+      <a href="#hardware"><span class="lang-es">Compatibilidad</span><span class="lang-en">Hardware</span></a>
+      <a href="#instalacion"><span class="lang-es">Instalación</span><span class="lang-en">Install</span></a>
+      <a href="#telemetria"><span class="lang-es"> Pruebas</span><span class="lang-en">Telemetry</span></a>
+      <a href="#preguntas"><span class="lang-es">Preguntas</span><span class="lang-en">Questions</span></a>
+      <button type="button" class="lang-toggle active" id="btn-lang-es" onclick="setLanguage('es')">ES</button>
+      <button type="button" class="lang-toggle" id="btn-lang-en" onclick="setLanguage('en')">EN</button>
+      <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos" class="btn-primary">GitHub Repo</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- HERO: Fragment on a shaped stage -->
+    <section class="hero-section grid-12">
+      <div class="hero-copy reveal-item">
+        <h1>
+          <span class="lang-es">HWP Asimétrico Ring-0<br />para MacBook A2141</span>
+          <span class="lang-en">Ring-0 Asymmetric HWP<br />for MacBook A2141</span>
+        </h1>
+
+        <p class="hero-lead lang-es">
+          Extensión de kernel XNU (<code>A2141AsymmetricHWP.kext</code>) y demonio proactivo para <strong>MacBook Pro 16,1 (2019, Core i7-9750H)</strong>. Pausa el bucle de 1&nbsp;ms de <code>XCPM</code>, protege el <code>Core&nbsp;0</code> y sincroniza <code>RAPL</code> con el presupuesto <code>PZ0E</code> del chip T2.
+        </p>
+        <p class="hero-lead lang-en">
+          XNU Ring-0 kernel extension (<code>A2141AsymmetricHWP.kext</code>) and proactive daemon for <strong>MacBook Pro 16,1 (2019, Core i7-9750H)</strong>. Pauses XNU's 1&nbsp;ms <code>XCPM</code> override, isolates <code>Core&nbsp;0</code>, and syncs <code>RAPL</code> with the T2 <code>PZ0E</code> power budget.
+        </p>
+
+        <div class="hero-actions">
+          <a href="#instalacion" class="btn-primary">
+            <span class="lang-es">Instalar en 4 pasos</span>
+            <span class="lang-en">Install in 4 steps</span>
+          </a>
+          <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-ubuntu" class="text-link">
+            <span class="lang-es">Ver edición Ubuntu 24.04 →</span>
+            <span class="lang-en">See Ubuntu 24.04 edition →</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-stage reveal-item">
+        <div class="telemetry-fragment" data-ui="true" aria-label="Interactive Ring-0 Telemetry Simulator">
+          <div class="frag-bar">
+            <div>
+              <strong>a2141-ctl status (v2.0.0)</strong>
+              <span style="color: var(--muted); margin-left: 8px;" id="ui-status-tag">XCPM DVFS Paused · Ring-0 Active</span>
+            </div>
+            <div class="frag-modes" role="group" aria-label="Select thermal profile">
+              <button type="button" class="frag-btn is-selected" id="mode-burst" onclick="selectProfile('burst')">BURST (&lt;=68C)</button>
+              <button type="button" class="frag-btn" id="mode-heavy" onclick="selectProfile('heavy')">HEAVY (&gt;=75C)</button>
+              <button type="button" class="frag-btn" id="mode-stock" onclick="selectProfile('stock')">STOCK XCPM</button>
+            </div>
+          </div>
+
+          <div class="frag-metrics-row">
+            <div class="frag-cell">
+              <span class="frag-cell-label">PECI Max Die (TCXC)</span>
+              <span class="frag-cell-val" id="ui-tcxc" style="color: var(--good);">64.73 °C</span>
+            </div>
+            <div class="frag-cell">
+              <span class="frag-cell-label">CPU Power (PC0R)</span>
+              <span class="frag-cell-val" id="ui-pc0r">8.60 W</span>
+            </div>
+            <div class="frag-cell">
+              <span class="frag-cell-label">PHPC / PZ0E Budget</span>
+              <span class="frag-cell-val" id="ui-pz0e">26.9 / 44.3 W</span>
+            </div>
+            <div class="frag-cell">
+              <span class="frag-cell-label">XCPM Speed Limit</span>
+              <span class="frag-cell-val" id="ui-speedlim" style="color: var(--good);">100 % (80.0 GFLOPs)</span>
+            </div>
+          </div>
+
+          <div class="frag-cores" id="ui-cores-grid">
+            <div class="core-tile"><span class="core-tile-id">Core 0 (Corner)</span><span class="core-tile-temp" id="c0-t">63 °C</span><span class="core-tile-mhz" id="c0-m">3200 MHz</span></div>
+            <div class="core-tile"><span class="core-tile-id">Core 1 (Mid)</span><span class="core-tile-temp" id="c1-t">63 °C</span><span class="core-tile-mhz" id="c1-m">4300 MHz</span></div>
+            <div class="core-tile"><span class="core-tile-id">Core 2 (Center)</span><span class="core-tile-temp" id="c2-t">62 °C</span><span class="core-tile-mhz" id="c2-m">3800 MHz</span></div>
+            <div class="core-tile"><span class="core-tile-id">Core 3 (Center)</span><span class="core-tile-temp" id="c3-t">62 °C</span><span class="core-tile-mhz" id="c3-m">3800 MHz</span></div>
+            <div class="core-tile"><span class="core-tile-id">Core 4 (Cool)</span><span class="core-tile-temp" id="c4-t">63 °C</span><span class="core-tile-mhz" id="c4-m">4500 MHz</span></div>
+            <div class="core-tile"><span class="core-tile-id">Core 5 (Cool)</span><span class="core-tile-temp" id="c5-t">62 °C</span><span class="core-tile-mhz" id="c5-m">4500 MHz</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 1: Exact Hardware Compatibility & Prerequisites -->
+    <section id="hardware" class="scope-strip reveal-item">
+      <div class="scope-header">
+        <h2 class="lang-es">Compatibilidad exclusiva<br />y requisitos previos</h2>
+        <h2 class="lang-en">Exclusive hardware scope<br />and prerequisites</h2>
+        <p class="lang-es" style="max-width: 48ch; color: var(--muted);">
+          Este driver escribe directamente en registros arquitectónicos <code>MSR</code> de Intel Coffee Lake y llaves de <code>AppleSMC</code>. Verifica que tu equipo coincida exactamente antes de instalar.
+        </p>
+        <p class="lang-en" style="max-width: 48ch; color: var(--muted);">
+          This driver writes directly to Intel Coffee Lake architectural <code>MSR</code> registers and <code>AppleSMC</code> keys. Verify exact model compatibility before installing.
+        </p>
+      </div>
+
+      <div class="scope-grid">
+        <div class="scope-item">
+          <strong>MacBookPro16,1 (A2141)</strong>
+          <p class="lang-es">Exclusivo para MacBook Pro 16" (Late 2019, EMC 3347). No usar en Apple Silicon (M1–M4) ni en modelos de 13"/15".</p>
+          <p class="lang-en">Exclusively for MacBook Pro 16" (Late 2019, EMC 3347). Do not install on Apple Silicon (M1–M4) or 13"/15" models.</p>
+        </div>
+        <div class="scope-item">
+          <strong>Core i7-9750H (6C/12T)</strong>
+          <p class="lang-es">Calibrado para 6 núcleos físicos Coffee Lake 14nm (2.60–4.50 GHz) + AMD Radeon Pro 5300M/5500M + Chip Apple T2.</p>
+          <p class="lang-en">Calibrated for 6 physical Coffee Lake 14nm cores (2.60–4.50 GHz) + AMD Radeon Pro 5300M/5500M + Apple T2 chip.</p>
+        </div>
+        <div class="scope-item">
+          <strong>macOS x86_64 + Xcode CLI</strong>
+          <p class="lang-es">Soporta macOS Catalina (10.15) a Sequoia (15). Requiere <code>xcode-select --install</code> (SDK <code>Kernel.framework</code>).</p>
+          <p class="lang-en">Supports macOS Catalina (10.15) to Sequoia (15). Requires <code>xcode-select --install</code> (<code>Kernel.framework</code> SDK).</p>
+        </div>
+        <div class="scope-item">
+          <strong>SIP Desactivado (Recovery)</strong>
+          <p class="lang-es">Requiere ejecutar <code>csrutil disable</code> desde Recovery Mode (<code>Cmd + R</code>) y aprobar el kext en Privacidad y Seguridad.</p>
+          <p class="lang-en">Requires running <code>csrutil disable</code> in Recovery Mode (<code>Cmd + R</code>) and approving the kext in Privacy &amp; Security.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: Guided Installation (Hick's Law Call & Response) -->
+    <section id="instalacion" class="flow-section grid-12">
+      <div class="flow-col">
+        <h2 class="lang-es reveal-item">Instalación guiada<br />en cuatro pasos</h2>
+        <h2 class="lang-en reveal-item">Guided installation<br />in four steps</h2>
+
+        <div class="flow-arrow-chain reveal-item">
+          <span class="lang-es">Recovery (Cmd+R: csrutil disable)  →  Compilar (sudo ./install.sh)  →  Permitir en Privacidad y Seguridad  →  Verificar (a2141-ctl status)</span>
+          <span class="lang-en">Recovery (Cmd+R: csrutil disable)  →  Build (sudo ./install.sh)  →  Allow in Privacy &amp; Security  →  Verify (a2141-ctl status)</span>
+        </div>
+
+        <div class="exchange-block reveal-item">
+          <p class="exchange-title lang-es">Primero → Reinicia manteniendo presionado Cmd + R (Recovery Mode), abre Utilidades → Terminal y desactiva la restricción de firma de extensiones de kernel:</p>
+          <p class="exchange-title lang-en">First → Reboot holding Cmd + R (Recovery Mode), open Utilities → Terminal, and disable kernel extension signing enforcement:</p>
+          <div class="code-call">
+            <button type="button" class="copy-action" onclick="copyCode(this, 'csrutil disable\nreboot')">Copy</button>
+            <pre><code>csrutil disable
+reboot</code></pre>
+          </div>
+          <div class="code-response" data-ui="true">
+            Successfully disabled System Integrity Protection. Please restart the machine for the changes to take effect.
+          </div>
+        </div>
+
+        <div class="exchange-block reveal-item">
+          <p class="exchange-title lang-es">Segundo → En macOS normal, instala las herramientas de compilación si no las tienes, clona el repositorio y ejecuta el instalador como root:</p>
+          <p class="exchange-title lang-en">Second → In normal macOS, install Xcode Command Line Tools if missing, clone the repository, and run the installer as root:</p>
+          <div class="code-call">
+            <button type="button" class="copy-action" onclick="copyCode(this, 'xcode-select --install 2>/dev/null || true\ngit clone https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos.git\ncd t2-macbook-pro-16-1-thermal-performance-fix-macos\nchmod +x install.sh uninstall.sh\nsudo ./install.sh')">Copy</button>
+            <pre><code>xcode-select --install 2&gt;/dev/null || true
+git clone https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos.git
+cd t2-macbook-pro-16-1-thermal-performance-fix-macos
+chmod +x install.sh uninstall.sh
+sudo ./install.sh</code></pre>
+          </div>
+          <div class="code-response" data-ui="true">
+            [+] 1. Compilando A2141AsymmetricHWP.kext (Ring-0) y a2141-ctl (Daemon/CLI)...<br />
+            [+] 2. Instalando en /Library/Extensions/A2141AsymmetricHWP.kext y /Library/LaunchDaemons/
+          </div>
+        </div>
+
+        <div class="exchange-block reveal-item">
+          <p class="exchange-title lang-es">Tercero → Si es la primera vez que cargas el driver, abre Ajustes del Sistema → Privacidad y Seguridad, presiona Permitir junto a A2141AsymmetricHWP, reinicia cuando macOS reconstruya AuxKC y verifica en vivo:</p>
+          <p class="exchange-title lang-en">Third → On first install, open System Settings → Privacy &amp; Security, click Allow next to A2141AsymmetricHWP, reboot when macOS rebuilds AuxKC, and verify live telemetry:</p>
+          <div class="code-call">
+            <button type="button" class="copy-action" onclick="copyCode(this, 'a2141-ctl status\na2141-ctl benchmark 15')">Copy</button>
+            <pre><code>a2141-ctl status
+a2141-ctl benchmark 15</code></pre>
+          </div>
+          <div class="code-response" data-ui="true">
+            Estado Kext: ACTIVO (Ciclos Ring-0: 24830) | Perfil: BURST (&lt;=68C)<br />
+            PECI Max Die (TCXC): 64.73 C | PC0R: 8.60 W | PHPC: 26.87 W / 44.26 W (PZ0E)<br />
+            Throughput Sostenido (15s 12T AVX2): 80.03 GigaFLOPs/s | Speed Limit: 100 %
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: Interactive Kernel Switches (Sentences with switches) -->
+    <section class="switches-section" aria-label="Kernel Mechanisms">
+      <div class="switch-band is-on" id="band-0">
+        <div class="switch-inner">
+          <div class="switch-text">
+            <p class="switch-statement lang-es">Pausa del bucle DVFS de 1 ms en XCPM vía /dev/xcpm (ioctl 0x20005808)</p>
+            <p class="switch-statement lang-en">Pause XNU's 1 ms XCPM DVFS override loop via /dev/xcpm (ioctl 0x20005808)</p>
+            <p class="switch-consequence lang-es">Efecto medido: _xcpm_dvfs_paused = 1 → XNU deja de forzar 4.50 GHz (Bit 42 = 1) cada 1 ms; el consumo en reposo cae de 35.45 W a 8.60 W.</p>
+            <p class="switch-consequence lang-en">Measured effect: _xcpm_dvfs_paused = 1 → XNU stops forcing 4.50 GHz (Bit 42 = 1) every 1 ms; idle CPU power drops from 35.45 W to 8.60 W.</p>
+          </div>
+          <div class="switch-ctrl-wrap">
+            <button type="button" class="kernel-toggle" data-ui="true" aria-pressed="true" aria-label="Toggle XCPM Pause" onclick="toggleBand('band-0', this)">
+              <span class="kernel-toggle-knob"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="switch-band is-on" id="band-1">
+        <div class="switch-inner">
+          <div class="switch-text">
+            <p class="switch-statement lang-es">Techos HWP asimétricos por núcleo en MSR 0x774 (Core 0 a 3.2 GHz / Core 4–5 a 4.5 GHz)</p>
+            <p class="switch-statement lang-en">Per-core asymmetric HWP ceilings in MSR 0x774 (Core 0 at 3.2 GHz / Core 4–5 at 4.5 GHz)</p>
+            <p class="switch-consequence lang-es">Efecto medido: Aísla la esquina caliente del cristal desnudo (Core 0 baja 29 °C en reposo y 18 °C en carga) manteniendo los núcleos fríos a máxima frecuencia.</p>
+            <p class="switch-consequence lang-en">Measured effect: Isolates the bare-die corner hotspot (Core 0 drops 29 °C at idle and 18 °C under load) while keeping cool cores at full boost.</p>
+          </div>
+          <div class="switch-ctrl-wrap">
+            <button type="button" class="kernel-toggle" data-ui="true" aria-pressed="true" aria-label="Toggle Per-Core HWP" onclick="toggleBand('band-1', this)">
+              <span class="kernel-toggle-knob"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="switch-band is-on" id="band-2">
+        <div class="switch-inner">
+          <div class="switch-text">
+            <p class="switch-statement lang-es">Sincronización dinámica RAPL (MSR 0x610) con el presupuesto PZ0E del chip T2</p>
+            <p class="switch-statement lang-en">Dynamic RAPL (MSR 0x610) synchronization with the Apple T2 PZ0E power budget</p>
+            <p class="switch-consequence lang-es">Efecto medido: Descuenta los 18.4 W de la Radeon Pro 5300M (PG0R) de PZ0E cada 500 ms → CPU_Speed_Limit se mantiene en 100 % sin caídas al 22 %.</p>
+            <p class="switch-consequence lang-en">Measured effect: Subtracts Radeon Pro 5300M 18.4 W (PG0R) from PZ0E every 500 ms → CPU_Speed_Limit stays at 100 % with zero drops to 22 %.</p>
+          </div>
+          <div class="switch-ctrl-wrap">
+            <button type="button" class="kernel-toggle" data-ui="true" aria-pressed="true" aria-label="Toggle PZ0E Sync" onclick="toggleBand('band-2', this)">
+              <span class="kernel-toggle-knob"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="switch-band" id="band-3">
+        <div class="switch-inner">
+          <div class="switch-text">
+            <p class="switch-statement lang-es">Freno térmico preventivo en silicio TCC Offset -6 °C (MSR 0x1A2 = 94 °C)</p>
+            <p class="switch-statement lang-en">Proactive silicon thermal brake TCC Offset -6 °C (MSR 0x1A2 = 94 °C)</p>
+            <p class="switch-consequence lang-es">Efecto medido: El microcódigo de Intel modula el multiplicador en microsegundos antes de tocar los 100 °C que disparan PROCHOT en el SMC.</p>
+            <p class="switch-consequence lang-en">Measured effect: Intel microcode modulates the multiplier in microseconds before ever hitting the 100 °C PROCHOT threshold in the SMC.</p>
+          </div>
+          <div class="switch-ctrl-wrap">
+            <button type="button" class="kernel-toggle" data-ui="true" aria-pressed="false" aria-label="Toggle TCC Offset" onclick="toggleBand('band-3', this)">
+              <span class="kernel-toggle-knob"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: Real Telemetry Plates & Comparison Matrix -->
+    <section id="telemetria" class="plates-section grid-12">
+      <div class="plates-header reveal-item">
+        <h2 class="lang-es">Pruebas en silicio real<br />y desensamblado XNU</h2>
+        <h2 class="lang-en">Real silicon telemetry<br />and XNU disassembly</h2>
+        <p class="lang-es" style="color: var(--muted); max-width: 58ch;">
+          Mediciones obtenidas sobre MacBookPro16,1 (Core i7-9750H + Radeon Pro 5300M activa con monitor externo) sin datos sensibles.
+        </p>
+        <p class="lang-en" style="color: var(--muted); max-width: 58ch;">
+          Measurements captured on physical MacBookPro16,1 hardware (Core i7-9750H + Radeon Pro 5300M active with external display).
+        </p>
+      </div>
+
+      <div class="plates-grid">
+        <figure class="plate-card reveal-item">
+          <img src="assets/plate-1-die-asymmetry.png" width="1200" height="750" alt="Mapa de asimetría térmica por núcleo físico en Intel Core i7-9750H (MSR 0x774)" class="shutter-reveal" />
+          <figcaption>
+            <p class="lang-es">Lámina I → Calibración asimétrica por núcleo físico (APIC ID 0..5) en MSR 0x774 con Bit 42 = 0.</p>
+            <p class="lang-en">Plate I → Per-physical-core asymmetric calibration (APIC ID 0..5) in MSR 0x774 with Bit 42 = 0.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="plate-card reveal-item">
+          <img src="assets/plate-2-xcpm-trace.png" width="1200" height="750" load="lazy" loading="lazy" alt="Desensamblado de /System/Library/Kernels/kernel en 0xffffff8000406290 mostrando la sobrescritura de MSR 0x774" />
+          <figcaption>
+            <p class="lang-es">Lámina II → Desensamblado de XNU (0xffffff8000406290) y bloqueo limpio mediante _xcpm_dvfs_pause.</p>
+            <p class="lang-en">Plate II → XNU disassembly (0xffffff8000406290) and clean override via _xcpm_dvfs_pause.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="plate-card reveal-item">
+          <img src="assets/plate-3-pz0e-budget.png" width="1200" height="750" loading="lazy" alt="Presupuesto combinado CPU+GPU PZ0E del chip Apple T2 frente al consumo de la Radeon Pro 5300M" />
+          <figcaption>
+            <p class="lang-es">Lámina III → Presupuesto dinámico PZ0E del chip T2 frente a los 18.4 W fijos de la Radeon Pro 5300M.</p>
+            <p class="lang-en">Plate III → Dynamic T2 PZ0E power budget vs the constant 18.4 W draw of the Radeon Pro 5300M.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="plate-card reveal-item">
+          <img src="assets/plate-4-avx2-telemetry.png" width="1200" height="750" loading="lazy" alt="Curva térmica durante 15 segundos de estrés FMA/AVX2 en 12 hilos: 79.3 C vs 99.0 C" />
+          <figcaption>
+            <p class="lang-es">Lámina IV → Benchmark FMA/AVX2 (12 hilos, 15 s): 80.03 GigaFLOPs/s a 79.3 °C con 100 % Speed Limit.</p>
+            <p class="lang-en">Plate IV → 12-Thread FMA/AVX2 Benchmark (15 s): 80.03 GigaFLOPs/s at 79.3 °C with 100 % Speed Limit.</p>
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="telemetry-table-wrap reveal-item">
+        <table>
+          <thead>
+            <tr>
+              <th><span class="lang-es">Métrica Medida en Silicio</span><span class="lang-en">Measured Silicon Metric</span></th>
+              <th><span class="lang-es">macOS Stock (XCPM Activo)</span><span class="lang-en">Stock macOS (XCPM Active)</span></th>
+              <th><span class="lang-es">Con A2141AsymmetricHWP v2.0.0</span><span class="lang-en">With A2141AsymmetricHWP v2.0.0</span></th>
+              <th><span class="lang-es">Diferencia</span><span class="lang-en">Delta</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="lang-es">Temperatura Máxima Die en Reposo (TCXC)</span><span class="lang-en">Idle Max Die Temp (TCXC)</span></td>
+              <td class="val-bad">89.84 °C</td>
+              <td class="val-good">64.73 °C</td>
+              <td class="val-good">-25.11 °C</td>
+            </tr>
+            <tr>
+              <td><span class="lang-es">Potencia CPU en Reposo con Monitor Externo (PC0R)</span><span class="lang-en">Idle CPU Power with External Display (PC0R)</span></td>
+              <td class="val-bad">35.45 W</td>
+              <td class="val-good">8.60 W</td>
+              <td class="val-good">-26.85 W (-75.7 %)</td>
+            </tr>
+            <tr>
+              <td><span class="lang-es">Temperatura Pico en Estrés AVX2 12 Hilos (15 s)</span><span class="lang-en">Peak Temp in 12-Thread AVX2 Stress (15 s)</span></td>
+              <td class="val-bad">99.00 °C</td>
+              <td class="val-good">79.30 °C</td>
+              <td class="val-good">-19.70 °C</td>
+            </tr>
+            <tr>
+              <td><span class="lang-es">Límite de Velocidad XCPM (kernel_task)</span><span class="lang-en">XCPM CPU_Speed_Limit (kernel_task)</span></td>
+              <td class="val-bad">22 % – 58 % (800 MHz)</td>
+              <td class="val-good">100 % constante</td>
+              <td class="val-good">0 % Throttling</td>
+            </tr>
+            <tr>
+              <td><span class="lang-es">Rendimiento Sostenido FMA/AVX2 (12 Hilos)</span><span class="lang-en">Sustained 12-Thread FMA/AVX2 Throughput</span></td>
+              <td class="val-bad">68.01 GigaFLOPs/s</td>
+              <td class="val-good">80.03 GigaFLOPs/s</td>
+              <td class="val-good">+17.7 %</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 5: Question Index, One Answer (FAQ) -->
+    <section id="preguntas" class="faq-section grid-12">
+      <div class="faq-list-col reveal-item">
+        <h2 class="lang-es">Preguntas técnicas<br />frecuentes</h2>
+        <h2 class="lang-en">Technical questions<br />answered</h2>
+
+        <button type="button" class="faq-q-btn is-active" onclick="selectFaq(0, this)">
+          <span class="faq-dot"></span>
+          <span class="lang-es">¿Por qué es obligatorio ejecutar csrutil disable en Recovery Mode?</span>
+          <span class="lang-en">Why is csrutil disable in Recovery Mode required?</span>
+        </button>
+
+        <button type="button" class="faq-q-btn" onclick="selectFaq(1, this)">
+          <span class="faq-dot"></span>
+          <span class="lang-es">¿Por qué el driver no lleva firma empresarial de Apple y aparece mylnzon58?</span>
+          <span class="lang-en">Why is the kext unsigned by Apple and attributed to mylnzon58?</span>
+        </button>
+
+        <button type="button" class="faq-q-btn" onclick="selectFaq(2, this)">
+          <span class="faq-dot"></span>
+          <span class="lang-es">¿Por qué fallaban los kexts que solo escribían MSR 0x774 cada 250 ms?</span>
+          <span class="lang-en">Why did periodic MSR 0x774 writes fail without pausing XCPM?</span>
+        </button>
+
+        <button type="button" class="faq-q-btn" onclick="selectFaq(3, this)">
+          <span class="faq-dot"></span>
+          <span class="lang-es">¿Qué hace exactamente la llave SMC PZ0E cuando conecto un monitor externo?</span>
+          <span class="lang-en">What does the T2 SMC key PZ0E do when an external display is connected?</span>
+        </button>
+
+        <button type="button" class="faq-q-btn" onclick="selectFaq(4, this)">
+          <span class="faq-dot"></span>
+          <span class="lang-es">¿Cómo desinstalo el driver y vuelvo al estado original de fábrica?</span>
+          <span class="lang-en">How do I uninstall the driver and restore factory defaults?</span>
+        </button>
+      </div>
+
+      <div class="faq-answer-col reveal-item">
+        <p class="faq-answer-text" id="faq-answer-pane">
+          Los registros de hardware Intel Speed Shift (MSR 0x774), RAPL (MSR 0x610) y TCC (MSR 0x1A2) solo pueden ejecutarse mediante la instrucción privilegiada wrmsr en Ring-0 (modo kernel). En macOS moderno, cargar un driver .kext compilado localmente desde código abierto requiere desactivar la restricción de firma de extensiones con csrutil disable en Recovery Mode (Cmd + R).
+        </p>
+      </div>
+    </section>
+
+    <!-- SECTION 6: Open Source Sponsorship & Author Split -->
+    <section class="sponsor-section">
+      <div class="grid-12">
+        <div class="sponsor-left reveal-item">
+          <h2 class="lang-es">Ingeniería abierta<br />por mylnzon58</h2>
+          <h2 class="lang-en">Open engineering<br />by mylnzon58</h2>
+          <p class="lang-es" style="color: var(--muted);">
+            Investigado, desensamblado y mantenido por <strong>Juan José Monzón (@mylnzon58)</strong> desde Argentina. Si esta solución recuperó la estabilidad térmica y potencia de tu MacBook Pro 16,1 en producción, puedes respaldar el desarrollo open-source independiente.
+          </p>
+          <p class="lang-en" style="color: var(--muted);">
+            Researched, disassembled, and maintained by <strong>Juan José Monzón (@mylnzon58)</strong> in Argentina. If this solution restored sustained performance on your MacBook Pro 16,1, consider supporting independent open-source systems engineering.
+          </p>
+        </div>
+
+        <div class="sponsor-right reveal-item" data-ui="true">
+          <strong style="font-size: var(--step-lead); color: var(--ink);">
+            <span class="lang-es">Canales Oficiales de Patrocinio y Contacto</span>
+            <span class="lang-en">Official Sponsorship &amp; Contact Channels</span>
+          </strong>
+          <div class="sponsor-links-grid">
+            <a href="https://github.com/sponsors/mylnzon58" target="_blank" rel="noopener" class="sponsor-link-box">
+              <strong>GitHub Sponsors →</strong>
+              <span>github.com/sponsors/mylnzon58</span>
+            </a>
+            <a href="https://www.patreon.com/JuanjoClassic" target="_blank" rel="noopener" class="sponsor-link-box">
+              <strong>Patreon Tiers →</strong>
+              <span>patreon.com/JuanjoClassic</span>
+            </a>
+            <a href="https://tecito.app/juanjoclassic" target="_blank" rel="noopener" class="sponsor-link-box">
+              <strong>Invitar un Tecito →</strong>
+              <span>tecito.app/juanjoclassic</span>
+            </a>
+            <a href="https://www.linkedin.com/in/juan-m-97b85681/" target="_blank" rel="noopener" class="sponsor-link-box">
+              <strong>LinkedIn Profesional →</strong>
+              <span>Juan José Monzón</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER OF TILES -->
+  <footer class="footer-board">
+    <div class="f-tile f-tile-statement">
+      <p class="lang-es">Driver Ring-0 de código abierto para Apple MacBook Pro 16,1 (2019, A2141).</p>
+      <p class="lang-en">Open-source Ring-0 kernel driver for Apple MacBook Pro 16,1 (2019, A2141).</p>
+      <span style="font-size: var(--step-small); color: var(--muted);">MIT License · Copyright (c) 2026 mylnzon58 (Juan José Monzón)</span>
+    </div>
+
+    <div class="f-tile f-tile-nav">
+      <strong style="font-size: var(--step-small); color: var(--muted);"> Ecosistema T2 / A2141</strong>
+      <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 12px;">
+        <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos" style="font-size: var(--step-small);">macOS Ring-0 HWP Fix</a>
+        <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-ubuntu" style="font-size: var(--step-small);">Ubuntu 24.04 Thermal Fix</a>
+        <a href="https://github.com/mylnzon58/tuxbar" style="font-size: var(--step-small);">TuxBar Pure-Rust Touch Bar</a>
+        <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-dsp-ubuntu-24.04" style="font-size: var(--step-small);">6-Channel Audio DSP Fix</a>
+      </div>
+    </div>
+
+    <div class="f-tile f-tile-arch">
+      <strong style="font-size: var(--step-small); color: var(--muted);">Target Silicon</strong>
+      <span style="font-size: var(--step-small); color: var(--ink);">MacBookPro16,1 · A2141 · Core i7-9750H · Apple T2</span>
+    </div>
+
+    <div class="f-tile f-tile-contact">
+      <strong style="font-size: var(--step-small); color: var(--muted);">Contacto Directo</strong>
+      <a href="mailto:mylnzon58@gmail.com" style="font-size: var(--step-body); color: var(--accent);">mylnzon58@gmail.com</a>
+    </div>
+
+    <div class="f-tile f-tile-wordmark">
+      <span>mylnzon58</span>
+    </div>
+
+    <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos" class="f-tile f-tile-cta">
+      <span class="lang-es">Ver código fuente en GitHub →</span>
+      <span class="lang-en">View source code on GitHub →</span>
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true" style="align-self: flex-end;">
+        <path d="M7 29L29 7M29 7H11M29 7V25" stroke="#0c0a08" stroke-width="4" />
+      </svg>
+    </a>
+  </footer>
+
+  <script>
+    var currentLang = 'es';
+
+    var profileData = {
+      burst: {
+        tag: 'XCPM DVFS Paused · Profile: BURST (<=68C)',
+        tcxc: '64.73 °C',
+        tcxcColor: 'var(--good)',
+        pc0r: '8.60 W',
+        pz0e: '26.9 / 44.3 W',
+        speed: '100 % (80.0 GFLOPs)',
+        speedColor: 'var(--good)',
+        cores: [
+          ['63 °C', '3200 MHz'],
+          ['63 °C', '4300 MHz'],
+          ['62 °C', '3800 MHz'],
+          ['62 °C', '3800 MHz'],
+          ['63 °C', '4500 MHz'],
+          ['62 °C', '4500 MHz']
+        ]
+      },
+      heavy: {
+        tag: 'XCPM DVFS Paused · Profile: HEAVY (>=75C AVX2)',
+        tcxc: '78.40 °C',
+        tcxcColor: 'var(--accent)',
+        pc0r: '33.90 W',
+        pz0e: '52.1 / 54.0 W',
+        speed: '100 % (80.0 GFLOPs)',
+        speedColor: 'var(--good)',
+        cores: [
+          ['78 °C', '2900 MHz'],
+          ['76 °C', '3500 MHz'],
+          ['78 °C', '3300 MHz'],
+          ['78 °C', '3300 MHz'],
+          ['74 °C', '3600 MHz'],
+          ['78 °C', '3600 MHz']
+        ]
+      },
+      stock: {
+        tag: 'Stock macOS XCPM (1ms 4.5GHz Override Active)',
+        tcxc: '99.00 °C',
+        tcxcColor: 'var(--warn)',
+        pc0r: '58.90 W',
+        pz0e: '57.9 / 36.1 W',
+        speed: '22 % – 58 % (Throttled)',
+        speedColor: 'var(--warn)',
+        cores: [
+          ['99 °C', '4500 MHz'],
+          ['94 °C', '4500 MHz'],
+          ['96 °C', '4500 MHz'],
+          ['95 °C', '4500 MHz'],
+          ['91 °C', '4500 MHz'],
+          ['93 °C', '4500 MHz']
+        ]
+      }
+    };
+
+    var faqAnswers = {
+      es: [
+        'Los registros de hardware Intel Speed Shift (MSR 0x774), RAPL (MSR 0x610) y TCC (MSR 0x1A2) solo pueden ejecutarse mediante la instrucción privilegiada wrmsr en Ring-0 (modo kernel). En macOS moderno, cargar un driver .kext compilado localmente desde código abierto requiere desactivar la restricción de firma de extensiones con csrutil disable en Recovery Mode (Cmd + R).',
+        'Apple exige un certificado corporativo especial (Kext Signing Certificate) restringido a fabricantes de hardware para firmar binarios .kext con SIP activo. Al ser un proyecto open-source independiente creado por Juan José Monzón (@mylnzon58), tú mismo compilas el código C/C++ auditable en tu máquina y lo autorizas localmente.',
+        'Nuestro desensamblado de /System/Library/Kernels/kernel en 0xffffff8000406290 demostró que _xcpm_urgency y _xcpm_timer sobrescriben MSR 0x774 cada ~1 ms con Desired_Performance = 45 (4.50 GHz) y Bit 42 (Package_Control) = 1. Al invocar _xcpm_dvfs_pause vía /dev/xcpm (ioctl 0x20005808), XNU deja de pisar el registro y nuestro kext mantiene el control el 100 % del tiempo.',
+        'PZ0E es el presupuesto térmico máximo combinado (CPU + GPU) calculado por AppleSMCPDRC en el chip T2. Cuando la piel inferior (Ts0S) sube a 46.5 °C, PZ0E baja de 82 W a 36.1 W. Como la GPU Radeon Pro 5300M consume 18.4 W fijos al conectar un monitor externo, quedan menos de 18 W para el CPU. Nuestro demonio ajusta RAPL PL1 cada 500 ms a (PZ0E - PG0R - 2.5 W) para que nunca se dispare kernel_task.',
+        'Ejecuta sudo ./uninstall.sh dentro de la carpeta del repositorio. El script detiene el LaunchDaemon, descarga A2141AsymmetricHWP.kext, elimina los binarios instalados y devuelve el control de frecuencias y ventiladores al estado original de fábrica.'
+      ],
+      en: [
+        'Intel Speed Shift (MSR 0x774), RAPL (MSR 0x610), and TCC (MSR 0x1A2) hardware registers can only be written via the privileged wrmsr instruction in Ring-0 (kernel mode). Loading a locally compiled open-source .kext on modern macOS requires disabling kext signing enforcement via csrutil disable in Recovery Mode (Cmd + R).',
+        'Apple restricts Kext Signing Certificates to select hardware vendors. Because this is an independent open-source driver authored by Juan José Monzón (@mylnzon58), you compile the auditable C/C++ source directly on your Mac and approve it locally in System Settings.',
+        'Disassembly of /System/Library/Kernels/kernel at 0xffffff8000406290 proved that _xcpm_urgency and _xcpm_timer overwrite MSR 0x774 every ~1 ms with Desired_Performance = 45 (4.50 GHz) and Bit 42 (Package_Control) = 1. Calling _xcpm_dvfs_pause via /dev/xcpm (ioctl 0x20005808) stops XNU from clobbering MSR 0x774.',
+        'PZ0E is the dynamic combined CPU + dGPU power ceiling managed by AppleSMCPDRC on the T2 chip. When bottom skin temperature (Ts0S) reaches 46.5 °C, PZ0E drops from 82 W to 36.1 W. Since the Radeon Pro 5300M draws a constant 18.4 W with an external monitor connected, less than 18 W remains for the CPU. Our daemon clamps RAPL PL1 every 500 ms to (PZ0E - PG0R - 2.5 W) so kernel_task never engages.',
+        'Run sudo ./uninstall.sh from the repository folder. It stops the LaunchDaemon, unloads A2141AsymmetricHWP.kext, removes the installed binaries, and restores stock XCPM and fan behavior.'
+      ]
+    };
+    var currentFaqIndex = 0;
+
+    function selectProfile(mode) {
+      var d = profileData[mode];
+      if (!d) return;
+      document.getElementById('mode-burst').classList.toggle('is-selected', mode === 'burst');
+      document.getElementById('mode-heavy').classList.toggle('is-selected', mode === 'heavy');
+      document.getElementById('mode-stock').classList.toggle('is-selected', mode === 'stock');
+
+      document.getElementById('ui-status-tag').textContent = d.tag;
+      var tcxcEl = document.getElementById('ui-tcxc');
+      tcxcEl.textContent = d.tcxc;
+      tcxcEl.style.color = d.tcxcColor;
+      document.getElementById('ui-pc0r').textContent = d.pc0r;
+      document.getElementById('ui-pz0e').textContent = d.pz0e;
+      var spEl = document.getElementById('ui-speedlim');
+      spEl.textContent = d.speed;
+      spEl.style.color = d.speedColor;
+
+      for (var i = 0; i < 6; i++) {
+        document.getElementById('c' + i + '-t').textContent = d.cores[i][0];
+        document.getElementById('c' + i + '-m').textContent = d.cores[i][1];
+      }
+    }
+
+    function toggleBand(id, btn) {
+      var band = document.getElementById(id);
+      if (!band) return;
+      var isOn = band.classList.toggle('is-on');
+      btn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+    }
+
+    function selectFaq(idx, btn) {
+      currentFaqIndex = idx;
+      var buttons = document.querySelectorAll('.faq-q-btn');
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove('is-active');
+      }
+      if (btn) btn.classList.add('is-active');
+      var pane = document.getElementById('faq-answer-pane');
+      if (pane) {
+        pane.textContent = faqAnswers[currentLang][idx];
+      }
+    }
+
+    function setLanguage(lang) {
+      currentLang = (lang === 'en') ? 'en' : 'es';
+      document.body.classList.toggle('mode-en', currentLang === 'en');
+      document.documentElement.lang = currentLang;
+      document.getElementById('btn-lang-es').classList.toggle('active', currentLang === 'es');
+      document.getElementById('btn-lang-en').classList.toggle('active', currentLang === 'en');
+      var pane = document.getElementById('faq-answer-pane');
+      if (pane) {
+        pane.textContent = faqAnswers[currentLang][currentFaqIndex];
+      }
+    }
+
+    function copyCode(btn, text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text);
+      }
+      var prev = btn.textContent;
+      btn.textContent = (currentLang === 'en') ? 'Copied' : 'Copiado';
+      setTimeout(function() { btn.textContent = prev; }, 1400);
+    }
+
+    (function initMotion() {
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+      }
+      var items = document.querySelectorAll('.reveal-item');
+      if (!('IntersectionObserver' in window)) return;
+      var obs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      items.forEach(function(el) {
+        var rect = el.getBoundingClientRect();
+        if (rect.top > window.innerHeight) {
+          el.classList.add('will-animate');
+          obs.observe(el);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
