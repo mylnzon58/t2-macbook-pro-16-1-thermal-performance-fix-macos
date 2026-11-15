@@ -109,6 +109,9 @@ Tanto el driver de kernel **A2141 ThermalBoost** (`A2141AsymmetricHWP.kext`), el
 - **Solo Monitor Visual (`A2141 ThermalMonitor` en `.dmg`):**  
   **[Descargar A2141-ThermalMonitor-v1.1.0-macOS.dmg](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-ThermalMonitor-v1.1.0-macOS.dmg)**
 
+> **Aviso de Gatekeeper la primera vez que abres un `.pkg` o `.dmg`:**  
+> Como este es un proyecto gratuito de código abierto sin certificado comercial pago de Apple, macOS puede mostrar que *"no pudo verificar"* el archivo. Haz clic en **Listo**, ve a **Ajustes del Sistema → Privacidad y Seguridad → Seguridad** y presiona **"Abrir de todas formas"**. Si instalas desde Terminal con `./install.sh`, se autoriza automáticamente.
+
 ---
 
 ## Requisitos antes de instalar el driver de bajo nivel
