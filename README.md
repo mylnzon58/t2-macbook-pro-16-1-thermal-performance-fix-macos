@@ -94,21 +94,32 @@ chmod +x install.sh uninstall.sh
 
 ---
 
-## Recursos necesarios antes de instalar
+## Descargas directas ya compiladas (Sin necesidad de compilar)
 
-1. **Herramientas de compilación de Xcode:**
-   ```bash
-   xcode-select --install
-   ```
-2. **Permiso para cargar extensiones de kernel sin firma comercial de Apple:**
-   Como este es un proyecto abierto e independiente, el driver se compila localmente en tu Mac. Para que macOS permita cargarlo, es necesario desactivar la restricción desde el modo de recuperación.
+Tanto el driver de kernel (`A2141AsymmetricHWP.kext`), el demonio y medidor (`a2141-ctl`) como el monitor visual (`A2141Monitor.app`) ya están precompilados e incluidos tanto en la sección de **Releases** como dentro de la carpeta `prebuilt/` del repositorio:
+
+- **Instalador completo en un clic (`.pkg` — Instala Driver + Demonio + Monitor Visual):**  
+  **[Descargar A2141-Thermal-Fix-v2.0.0-Installer.pkg](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-Thermal-Fix-v2.0.0-Installer.pkg)**
+- **Paquete completo precompilado (`.zip` con binarios e instalador):**  
+  **[Descargar A2141-Thermal-Fix-v2.0.0-Precompiled-macOS.zip](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-Thermal-Fix-v2.0.0-Precompiled-macOS.zip)**
+- **Solo Monitor Visual (`A2141 Monitor` en `.dmg`):**  
+  **[Descargar A2141Monitor-v1.0.0-macOS-x86_64.dmg](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141Monitor-v1.0.0-macOS-x86_64.dmg)**
+
+---
+
+## Requisitos antes de instalar el driver de bajo nivel
+
+1. **Para usar únicamente el Monitor Visual (`A2141 Monitor`) o el control de turbinas y energía (`a2141-ctl`):**  
+   No necesitas desactivar SIP ni instalar herramientas de compilación; puedes abrir directamente el instalador `.pkg` o el `.dmg`.
+2. **Para activar además la extensión de kernel (`A2141AsymmetricHWP.kext`) que controla los límites por núcleo en Ring-0:**  
+   Como es un driver abierto sin firma comercial de Apple, macOS pide desactivar la restricción de extensiones desde Modo Recuperación (`csrutil disable`). Si además tienes las herramientas de Xcode instaladas (`xcode-select --install`), `install.sh` puede ajustar el `.kext` automáticamente a tu versión exacta de kernel; de lo contrario instala directamente el binario precompilado incluido en `prebuilt/`.
 
 ---
 
 ## Guía de instalación paso a paso
 
 ```
-Paso 1: Modo Recuperación  →  Paso 2: Instalar  →  Paso 3: Aprobar en Ajustes  →  Paso 4: Medir resultados
+Paso 1: Modo Recuperación  →  Paso 2: Instalar (.pkg o ./install.sh)  →  Paso 3: Aprobar en Ajustes  →  Paso 4: Medir resultados
 ```
 
 ### Paso 1 → Desactivar la restricción en Modo Recuperación
@@ -121,16 +132,18 @@ Paso 1: Modo Recuperación  →  Paso 2: Instalar  →  Paso 3: Aprobar en Ajust
    reboot
    ```
 
-### Paso 2 → Clonar, compilar e instalar
+### Paso 2 → Instalar con el archivo `.pkg` o desde Terminal
 
-Una vez dentro de macOS normal, abre la Terminal y ejecuta:
+**Opción A (Directa sin Terminal):** Descarga y abre **[A2141-Thermal-Fix-v2.0.0-Installer.pkg](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-Thermal-Fix-v2.0.0-Installer.pkg)**. Instalará automáticamente el driver, el servicio en segundo plano y la aplicación `A2141 Monitor` en tu carpeta de Aplicaciones.
 
+**Opción B (Por Terminal usando los binarios precompilados de `prebuilt/`):**
 ```bash
 git clone https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos.git
 cd t2-macbook-pro-16-1-thermal-performance-fix-macos
 chmod +x install.sh uninstall.sh
 sudo ./install.sh
 ```
+*(Si deseas forzar la recompilación desde código fuente en tu equipo, puedes ejecutar `sudo ./install.sh --compile`).*
 
 ### Paso 3 → Autorizar el driver en Privacidad y Seguridad
 

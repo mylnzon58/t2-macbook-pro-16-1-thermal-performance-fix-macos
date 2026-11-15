@@ -10,17 +10,18 @@ CLI_BIN     := $(BUILD_DIR)/a2141-ctl
 
 CXX         := clang++
 CC          := clang
-MACOS_MIN   := -mmacosx-version-min=26.2
+KEXT_MIN    := -mmacosx-version-min=26.2
+CLI_MIN     := -mmacosx-version-min=12.0
 
-KEXT_CXXFLAGS := -arch x86_64 $(MACOS_MIN) -mkernel -nostdinc \
+KEXT_CXXFLAGS := -arch x86_64 $(KEXT_MIN) -mkernel -nostdinc \
                  -isystem "$(KERNEL_INC)" -Iinclude \
                  -DKERNEL -DKERNEL_PRIVATE -DDRIVER_PRIVATE -DAPPLE -DNeXT \
                  -Wall -Wextra -Werror -O2 -fno-builtin -fno-common -fno-rtti -fno-exceptions
 
-KEXT_LDFLAGS  := -arch x86_64 $(MACOS_MIN) -Wl,-kext -nostdlib -lkmodc++ -lkmod -lcc_kext
+KEXT_LDFLAGS  := -arch x86_64 $(KEXT_MIN) -Wl,-kext -nostdlib -lkmodc++ -lkmod -lcc_kext
 
-CLI_CFLAGS    := -arch x86_64 $(MACOS_MIN) -Iinclude -Wall -Wextra -Werror -O3 -march=native -pthread
-CLI_LDFLAGS   := -arch x86_64 $(MACOS_MIN) -framework IOKit -framework CoreFoundation -lpthread
+CLI_CFLAGS    := -arch x86_64 $(CLI_MIN) -mavx2 -mfma -Iinclude -Wall -Wextra -Werror -O3 -pthread
+CLI_LDFLAGS   := -arch x86_64 $(CLI_MIN) -framework IOKit -framework CoreFoundation -lpthread
 
 .PHONY: all kext cli verify clean
 
