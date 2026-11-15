@@ -1,0 +1,30 @@
+# Control Térmico y de Rendimiento para MacBook Pro 16" 2019 A2141 en macOS
+
+> Herramienta abierta de prueba y medición para la MacBook Pro de 16 pulgadas de finales de 2019 con procesador Intel Core i7-9750H en macOS. Desarrollada con precaución por Juan Monzón (@mylnzon58), combinando análisis detallado de bajo nivel con apoyo de inteligencia artificial para que cada usuario pueda medir temperatura y velocidad antes y después en su propio equipo.
+
+## En qué equipo aplica únicamente
+- Modelo: MacBook Pro de 16 pulgadas de finales de 2019
+- Identificador: MacBookPro16,1 · Chasis A2141
+- Procesador: Intel Core i7-9750H de 6 núcleos y 12 hilos
+- Gráficos: AMD Radeon Pro 5300M o 5500M
+- Controlador: Chip Apple T2
+- Sistema: macOS Catalina 10.15 hasta macOS Sequoia 15 o superior
+
+## Qué problema busca aliviar y cómo medirlo
+De fábrica, macOS prioriza el silencio de los ventiladores y aplica la misma frecuencia máxima a todos los núcleos. Con los años de uso o al conectar un monitor externo, el equipo puede trabajar cerca de los 90 °C en tareas livianas y recortar su velocidad bajo carga.
+
+Esta herramienta incluye el comando `a2141-ctl` para medir en tu propia máquina antes y después:
+1. Pausa la sobreescritura continua de frecuencias en reposo.
+2. Mantiene el núcleo 0 a un máximo de 3.2 GHz para reducir el calor en el borde del procesador y deja los núcleos 1 al 5 libres hasta 4.1 - 4.5 GHz.
+3. Adelanta de forma suave la curva de ventiladores desde los 55 °C hasta los 78 °C.
+4. Ajusta la potencia del procesador en función del margen eléctrico disponible cuando la gráfica AMD está activa.
+
+## Mediciones obtenidas en nuestro equipo de pruebas
+- Temperatura en reposo: de 89.84 °C a 64.73 °C
+- Temperatura máxima en prueba de cálculo de 15 segundos: de 99.00 °C a 79.31 °C
+- Velocidad de cálculo sostenida en 12 hilos: de 68.01 a 80.03 GigaFLOPs/s manteniendo el reloj al 100 %
+
+## Enlaces
+- Repositorio en GitHub: https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos
+- Guía web paso a paso: https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/
+- Autor: Juan José Monzón · https://github.com/mylnzon58

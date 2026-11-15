@@ -1,0 +1,6 @@
+build/
+.DS_Store
+.taste-skill/
+*.o
+*.dSYM/
+electron-app/

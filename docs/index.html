@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MacBook Pro 16,1 (A2141) macOS Thermal &amp; Ring-0 HWP Driver</title>
+  <meta name="description" content="Driver Ring-0 (.kext) y demonio AppleSMC para MacBook Pro 16,1 (2019, A2141, Core i7-9750H). Reduce 25 °C en reposo y 19.7 °C en carga AVX2 sin throttling." />
+  <meta name="author" content="Juan José Monzón (@mylnzon58)" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/" />
+  <link rel="alternate" hreflang="es" href="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/" />
+  <link rel="alternate" hreflang="en" href="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/?lang=en" />
+  <link rel="alternate" hreflang="x-default" href="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="mylnzon58 Systems Engineering" />
+  <meta property="og:locale" content="es_AR" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:title" content="MacBook Pro 16,1 (A2141) macOS Ring-0 Asymmetric HWP &amp; Thermal Fix" />
+  <meta property="og:description" content="Solución en Ring-0 (IOKit Kext + /dev/xcpm pause + AppleSMC PZ0E) para Intel Core i7-9750H y Radeon Pro 5300M. De 89.8 °C a 64.7 °C en reposo y +17.7% GFLOPs/s en estrés AVX2." />
+  <meta property="og:url" content="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/" />
+  <meta property="og:image" content="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/og-card-a2141-macos.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Telemetría real del driver Ring-0 A2141AsymmetricHWP en MacBook Pro 16,1 (A2141) por mylnzon58" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="MacBook Pro 16,1 (A2141) macOS Ring-0 Asymmetric HWP &amp; Thermal Fix" />
+  <meta name="twitter:description" content="Extensión de kernel XNU en Ring-0 y control proactivo de presupuesto PZ0E para MacBook Pro 16,1 (2019, A2141) por Juan José Monzón (@mylnzon58)." />
+  <meta name="twitter:image" content="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/og-card-a2141-macos.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Person",
+        "@id": "https://github.com/mylnzon58#person",
+        "name": "Juan José Monzón",
+        "alternateName": "mylnzon58",
+        "url": "https://github.com/mylnzon58",
+        "jobTitle": "Full Stack Developer & Systems Engineer",
+        "sameAs": [
+          "https://github.com/mylnzon58",
+          "https://www.linkedin.com/in/juan-m-97b85681/",
+          "https://www.instagram.com/juanjoclassic/",
+          "https://www.patreon.com/JuanjoClassic",
+          "https://tecito.app/juanjoclassic"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/#website",
+        "url": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/",
+        "name": "A2141AsymmetricHWP macOS Ring-0 Driver Documentation",
+        "publisher": {
+          "@id": "https://github.com/mylnzon58#person"
+        },
+        "inLanguage": ["es", "en"]
+      },
+      {
+        "@type": "SoftwareSourceCode",
+        "@id": "https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos#software",
+        "name": "A2141AsymmetricHWP",
+        "version": "2.0.0",
+        "description": "Ring-0 XNU Kernel Extension (.kext) and AppleSMC/XCPM daemon for Apple MacBook Pro 16,1 (2019, A2141, Intel Core i7-9750H, AMD Radeon Pro 5300M/5500M) on macOS.",
+        "codeRepository": "https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos",
+        "programmingLanguage": ["C++", "C", "Shell"],
+        "runtimePlatform": "macOS XNU Kernel Ring-0 (IOKit) x86_64",
+        "operatingSystem": "macOS 10.15 Catalina through macOS 15 Sequoia (x86_64)",
+        "license": "https://opensource.org/licenses/MIT",
+        "author": {
+          "@id": "https://github.com/mylnzon58#person"
+        }
+      },
+      {
+        "@type": "TechArticle",
+        "@id": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/#article",
+        "headline": "MacBook Pro 16,1 (A2141) macOS Thermal & Ring-0 HWP Driver",
+        "description": "Desensamblado del kernel XNU (XCPM 0xffffff8000406290), extensión Ring-0 para techos HWP asimétricos por núcleo (MSR 0x774) y sincronización RAPL con el presupuesto térmico PZ0E del chip Apple T2.",
+        "image": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/og-card-a2141-macos.png",
+        "datePublished": "2026-11-15T00:00:00-03:00",
+        "dateModified": "2026-11-15T03:45:00-03:00",
+        "author": {
+          "@id": "https://github.com/mylnzon58#person"
+        },
+        "publisher": {
+          "@id": "https://github.com/mylnzon58#person"
+        },
+        "about": {
+          "@id": "https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos#software"
+        },
+        "mainEntityOfPage": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "mylnzon58",
+            "item": "https://github.com/mylnzon58"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "A2141 macOS Ring-0 Driver",
+            "item": "https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/"
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg: #0c0a08;
+      --surface: #181512;
+      --surface-alt: #211d19;
+      --stage: #1f1a14;
+      --ink: #ffffff;
+      --muted: #8f8a84;
+      --accent: #c9a45a;
+      --accent-ink: #0c0a08;
+      --good: #4a9e72;
+      --warn: #c45240;
+
+      --step-small: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
+      --step-body: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+      --step-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+      --step-head: clamp(2rem, 1.3rem + 3.2vw, 3.75rem);
+      --step-hero: clamp(2.5rem, 1.8rem + 3.4vw, 4.5rem);
+
+      --margin-x: clamp(1.25rem, 3vw, 2.5rem);
+      --section-gap: clamp(7.5rem, 11vw, 12.5rem);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      background-color: var(--bg);
+      color: var(--ink);
+      font-family: "Jost", -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--ink);
+      overflow-x: hidden;
+      font-variant-numeric: tabular-nums;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    a:hover {
+      opacity: 0.82;
+    }
+
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: "Jost", sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 0.94;
+      text-wrap: balance;
+      color: var(--ink);
+    }
+
+    p, li {
+      font-size: var(--step-body);
+      line-height: 1.52;
+      color: var(--ink);
+      text-wrap: pretty;
+    }
+
+    /* Navigation: plain row, wordmark left, links right */
+    .top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px var(--margin-x);
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    .wordmark {
+      font-size: var(--step-body);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+
+    .nav-links a {
+      font-size: var(--step-small);
+      color: var(--muted);
+    }
+
+    .nav-links a:hover {
+      color: var(--ink);
+    }
+
+    .btn-primary {
+      display: inline-block;
+      background-color: var(--accent);
+      color: var(--accent-ink);
+      font-family: "Jost", sans-serif;
+      font-size: var(--step-small);
+      font-weight: 700;
+      padding: 12px 22px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.16s ease, opacity 0.16s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      opacity: 0.94;
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .lang-toggle {
+      background-color: var(--surface);
+      color: var(--ink);
+      border: none;
+      padding: 8px 14px;
+      font-family: "Jost", sans-serif;
+      font-size: var(--step-small);
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.16s ease, background-color 0.16s ease;
+    }
+
+    .lang-toggle.active {
+      background-color: var(--accent);
+      color: var(--accent-ink);
+      font-weight: 700;
+    }
+
+    /* Grid layout */
+    .grid-12 {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 24px;
+      padding: 0 var(--margin-x);
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    /* Hero: Fragment on a shaped stage */
+    .hero-section {
+      position: relative;
+      min-height: 88vh;
+      padding-top: 48px;
+      margin-bottom: var(--section-gap);
+    }
+
+    .hero-copy {
+      grid-column: 1 / 7;
+      padding-top: 24px;
+    }
+
+    .hero-copy h1 {
+      font-size: var(--step-hero);
+      max-width: 15ch;
+      margin-bottom: 24px;
+    }
+
+    .hero-lead {
+      font-size: var(--step-body);
+      color: var(--ink);
+      max-width: 44ch;
+      margin-bottom: 28px;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .text-link {
+      font-size: var(--step-body);
+      font-weight: 500;
+      color: var(--accent);
+    }
+
+    .hero-stage {
+      grid-column: 5 / 13;
+      background-color: var(--stage);
+      clip-path: polygon(56px 0, 100% 0, 100% 100%, 0 100%, 0 56px);
+      padding: 48px 40px 40px 48px;
+      margin-top: 24px;
+    }
+
+    /* Interactive Live Ring-0 Fragment (data-ui) */
+    .telemetry-fragment {
+      background-color: var(--bg);
+      padding: 24px;
+      font-variant-numeric: tabular-nums;
+      font-size: 14px;
+      color: var(--ink);
+    }
+
+    .frag-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      background-color: var(--surface);
+      padding: 14px 16px;
+    }
+
+    .frag-modes {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .frag-btn {
+      background-color: var(--bg);
+      color: var(--muted);
+      border: none;
+      padding: 7px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+
+    .frag-btn.is-selected {
+      background-color: var(--accent);
+      color: var(--accent-ink);
+    }
+
+    .frag-metrics-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .frag-cell {
+      background-color: var(--surface);
+      padding: 12px;
+    }
+
+    .frag-cell-label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .frag-cell-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .frag-cores {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+
+    .core-tile {
+      background-color: var(--surface);
+      padding: 10px;
+    }
+
+    .core-tile-id {
+      font-size: 13px;
+      color: var(--muted);
+      display: block;
+    }
+
+    .core-tile-temp {
+      font-size: 17px;
+      font-weight: 700;
+      display: block;
+      margin: 4px 0;
+    }
+
+    .core-tile-mhz {
+      font-size: 13px;
+      color: var(--accent);
+      display: block;
+    }
+
+    /* Section 1: Hardware Scope Strip (proof) */
+    .scope-strip {
+      padding: 80px var(--margin-x);
+      max-width: 1440px;
+      margin: 0 auto var(--section-gap);
+      background-color: var(--surface);
+    }
+
+    .scope-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+
+    .scope-header h2 {
+      font-size: var(--step-head);
+      max-width: 16ch;
+    }
+
+    .scope-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .scope-item {
+      background-color: var(--bg);
+      padding: 24px;
+    }
+
+    .scope-item strong {
+      display: block;
+      font-size: var(--step-lead);
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .scope-item p {
+      font-size: var(--step-small);
+      color: var(--ink);
+    }
+
+    /* Section 2: Guided Installation Flow (Hick's Law Call & Response) */
+    .flow-section {
+      margin-bottom: var(--section-gap);
+    }
+
+    .flow-col {
+      grid-column: 3 / 11;
+    }
+
+    .flow-col h2 {
+      font-size: var(--step-head);
+      max-width: 16ch;
+      margin-bottom: 24px;
+    }
+
+    .flow-arrow-chain {
+      background-color: var(--surface);
+      padding: 20px 24px;
+      font-size: var(--step-body);
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 56px;
+    }
+
+    .exchange-block {
+      margin-bottom: 72px;
+    }
+
+    .exchange-title {
+      font-size: var(--step-lead);
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    .code-call {
+      background-color: var(--surface);
+      padding: 20px 24px;
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .code-call pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--ink);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .copy-action {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background-color: var(--accent);
+      color: var(--accent-ink);
+      border: none;
+      padding: 6px 12px;
+      font-family: "Jost", sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .code-response {
+      margin-left: 48px;
+      background-color: var(--surface-alt);
+      padding: 18px 22px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13.5px;
+      color: var(--ink);
+    }
+
+    /* Section 3: Interactive Kernel Switches (Sentences with switches) */
+    .switches-section {
+      margin-bottom: var(--section-gap);
+    }
+
+    .switch-band {
+      padding: 38px var(--margin-x);
+      background-color: var(--bg);
+      transition: background-color 0.2s ease;
+    }
+
+    .switch-band.is-on {
+      background-color: var(--surface);
+    }
+
+    .switch-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      align-items: center;
+      gap: 20px;
+    }
+
+    .switch-text {
+      grid-column: 1 / 10;
+    }
+
+    .switch-statement {
+      font-size: clamp(1.35rem, 2.2vw, 2.1rem);
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--muted);
+    }
+
+    .switch-band.is-on .switch-statement {
+      color: var(--ink);
+    }
+
+    .switch-consequence {
+      font-size: var(--step-body);
+      color: var(--accent);
+      margin-top: 10px;
+      display: none;
+    }
+
+    .switch-band.is-on .switch-consequence {
+      display: block;
+    }
+
+    .switch-ctrl-wrap {
+      grid-column: 10 / 13;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .kernel-toggle {
+      width: 68px;
+      height: 36px;
+      background-color: var(--surface-alt);
+      border: none;
+      position: relative;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .kernel-toggle-knob {
+      display: block;
+      width: 28px;
+      height: 28px;
+      background-color: var(--muted);
+      transition: transform 0.18s ease, background-color 0.18s ease;
+    }
+
+    .switch-band.is-on .kernel-toggle {
+      background-color: var(--accent);
+    }
+
+    .switch-band.is-on .kernel-toggle-knob {
+      transform: translateX(32px);
+      background-color: var(--accent-ink);
+    }
+
+    /* Section 4: Silicon Telemetry Plates & Benchmark Table */
+    .plates-section {
+      margin-bottom: var(--section-gap);
+    }
+
+    .plates-header {
+      grid-column: 1 / 13;
+      margin-bottom: 36px;
+    }
+
+    .plates-header h2 {
+      font-size: var(--step-head);
+      max-width: 15ch;
+      margin-bottom: 16px;
+    }
+
+    .plates-grid {
+      grid-column: 1 / 13;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+
+    .plate-card {
+      background-color: var(--surface);
+      padding: 20px;
+    }
+
+    .plate-card img {
+      width: 100%;
+      height: auto;
+      display: block;
+      margin-bottom: 16px;
+    }
+
+    .plate-card p {
+      font-size: var(--step-small);
+      color: var(--muted);
+    }
+
+    .shutter-reveal {
+      clip-path: inset(0 0 0 0);
+      transition: clip-path 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .telemetry-table-wrap {
+      grid-column: 1 / 13;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: var(--surface);
+      font-size: var(--step-body);
+    }
+
+    th, td {
+      padding: 16px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--bg);
+    }
+
+    th {
+      background-color: var(--surface-alt);
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .val-bad {
+      color: var(--warn);
+    }
+
+    .val-good {
+      color: var(--good);
+      font-weight: 700;
+    }
+
+    /* Section 5: Question Index, One Answer (FAQ) */
+    .faq-section {
+      margin-bottom: var(--section-gap);
+    }
+
+    .faq-list-col {
+      grid-column: 1 / 6;
+    }
+
+    .faq-list-col h2 {
+      font-size: var(--step-head);
+      max-width: 14ch;
+      margin-bottom: 28px;
+    }
+
+    .faq-q-btn {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      padding: 14px 0;
+      font-family: "Jost", sans-serif;
+      font-size: var(--step-body);
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.15s ease, transform 0.15s ease;
+    }
+
+    .faq-dot {
+      width: 10px;
+      height: 10px;
+      background-color: var(--muted);
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+
+    .faq-q-btn.is-active {
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .faq-q-btn.is-active .faq-dot {
+      background-color: var(--accent);
+    }
+
+    .faq-answer-col {
+      grid-column: 7 / 13;
+      position: sticky;
+      top: 120px;
+      align-self: start;
+      background-color: var(--surface);
+      padding: 36px;
+    }
+
+    .faq-answer-text {
+      font-size: var(--step-lead);
+      line-height: 1.42;
+      color: var(--ink);
+      max-width: 38ch;
+    }
+
+    /* Section 6: Open Source Sponsorship & Author Split (CTA) */
+    .sponsor-section {
+      background-color: var(--surface);
+      padding: 80px 0;
+      margin-bottom: 48px;
+    }
+
+    .sponsor-left {
+      grid-column: 1 / 6;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .sponsor-left h2 {
+      font-size: var(--step-head);
+      max-width: 13ch;
+      margin-bottom: 20px;
+    }
+
+    .sponsor-right {
+      grid-column: 7 / 13;
+      background-color: var(--bg);
+      padding: 36px;
+    }
+
+    .sponsor-links-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .sponsor-link-box {
+      background-color: var(--surface);
+      padding: 18px 20px;
+      display: block;
+      transition: transform 0.16s ease, background-color 0.16s ease;
+    }
+
+    .sponsor-link-box:hover {
+      transform: translateY(-2px);
+      background-color: var(--surface-alt);
+    }
+
+    .sponsor-link-box strong {
+      display: block;
+      font-size: var(--step-body);
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .sponsor-link-box span {
+      font-size: var(--step-small);
+      color: var(--ink);
+    }
+
+    /* Section 7: Footer of Tiles */
+    .footer-board {
+      padding: 0 12px 12px;
+      max-width: 1440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 8px;
+    }
+
+    .f-tile {
+      background-color: var(--surface);
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 200px;
+    }
+
+    .f-tile-statement { grid-column: 1 / 5; }
+    .f-tile-nav       { grid-column: 5 / 8; }
+    .f-tile-arch      { grid-column: 8 / 10; }
+    .f-tile-contact   { grid-column: 10 / 13; }
+
+    .f-tile-wordmark {
+      grid-column: 1 / 9;
+      background-color: var(--ink);
+      color: var(--bg);
+      min-height: 240px;
+      align-items: flex-start;
+      justify-content: flex-end;
+    }
+
+    .f-tile-wordmark span {
+      font-size: clamp(2.6rem, 6.5vw, 5.5rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 0.9;
+      color: var(--bg);
+    }
+
+    .f-tile-cta {
+      grid-column: 9 / 13;
+      background-color: var(--accent);
+      color: var(--accent-ink);
+      min-height: 240px;
+    }
+
+    .f-tile-cta span {
+      font-size: var(--step-lead);
+      font-weight: 700;
+      color: var(--accent-ink);
+    }
+
+    /* Scroll entrance motion */
+    .reveal-item {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+
+    .reveal-item.will-animate {
+      opacity: 0;
+      transform: translateY(22px);
+    }
+
+    .reveal-item.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Language switching */
+    .lang-en { display: none; }
+    body.mode-en .lang-es { display: none; }
+    body.mode-en .lang-en { display: block; }
+    body.mode-en span.lang-en, body.mode-en a.lang-en { display: inline; }
+
+    @media (max-width: 960px) {
+      .hero-copy { grid-column: 1 / 13; }
+      .hero-stage { grid-column: 1 / 13; padding: 24px 16px; }
+      .frag-metrics-row { grid-template-columns: repeat(2, 1fr); }
+      .frag-cores { grid-template-columns: repeat(3, 1fr); }
+      .scope-grid { grid-template-columns: repeat(2, 1fr); }
+      .flow-col { grid-column: 1 / 13; }
+      .code-response { margin-left: 0; }
+      .plates-grid { grid-template-columns: 1fr; }
+      .faq-list-col { grid-column: 1 / 13; }
+      .faq-answer-col { grid-column: 1 / 13; position: static; margin-top: 20px; }
+      .sponsor-left { grid-column: 1 / 13; margin-bottom: 28px; }
+      .sponsor-right { grid-column: 1 / 13; }
+      .f-tile-statement, .f-tile-nav, .f-tile-arch, .f-tile-contact,
+      .f-tile-wordmark, .f-tile-cta { grid-column: 1 / 13; min-height: 160px; }
+    }
+
+    @media (max-width: 540px) {
+      .scope-grid { grid-template-columns: 1fr; }
+      .sponsor-links-grid { grid-template-columns: 1fr; }
+      .switch-text { grid-column: 1 / 9; }
+      .switch-ctrl-wrap { grid-column: 9 / 13; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="top-nav">
+    <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos" class="wordmark">mylnzon58 / A2141-Ring0</a>
+    <nav class="nav-links" aria-label="Primary Navigation">
+      <a href="#hardware"><span class="lang-es">Compatibilidad</span><span class="lang-en">Hardware</span></a>
+      <a href="#instalacion"><span class="lang-es">Instalación</span><span class="lang-en">Install</span></a>
+      <a href="#telemetria"><span class="lang-es"> Pruebas</span><span class="lang-en">Telemetry</span></a>
+      <a href="#preguntas"><span class="lang-es">Preguntas</span><span class="lang-en">Questions</span></a>
+      <button type="button" class="lang-toggle active" id="btn-lang-es" onclick="setLanguage('es')">ES</button>
+      <button type="button" class="lang-toggle" id="btn-lang-en" onclick="setLanguage('en')">EN</button>
+      <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos" class="btn-primary">GitHub Repo</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- HERO: Fragment on a shaped stage -->
+    <section class="hero-section grid-12">
+      <div class="hero-copy reveal-item">
+        <h1>
+          <span class="lang-es">Control térmico y medición<br />para MacBook A2141</span>
+          <span class="lang-en">Thermal control and testing<br />for MacBook A2141</span>
+        </h1>
+
+        <p class="hero-lead lang-es">
+          Herramienta abierta de prueba y medición para la <strong>MacBook Pro de 16 pulgadas de finales de 2019 con procesador Core i7-9750H</strong>. Desarrollada con precaución, combinando análisis detallado de bajo nivel con el apoyo de inteligencia artificial para que puedas medir temperatura y velocidad antes y después en tu propio equipo.
+        </p>
+        <p class="hero-lead lang-en">
+          Open-source testing and measurement tool for the <strong>late 2019 16-inch MacBook Pro with Core i7-9750H</strong>. Built with caution through detailed low-level analysis assisted by AI, allowing you to measure temperatures and sustained speed before and after on your own machine.
+        </p>
+
+        <div class="hero-actions">
+          <a href="#instalacion" class="btn-primary">
+            <span class="lang-es">Guía en 4 pasos</span>
+            <span class="lang-en">4-step guide</span>
+          </a>
+          <a href="https://github.com/mylnzon58/a2141-macos-thermal-monitor" class="text-link">
+            <span class="lang-es">Descargar App Monitor en Tiempo Real →</span>
+            <span class="lang-en">Download Real-Time Monitor App →</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-stage reveal-item">
+        <div class="telemetry-fragment" data-ui="true" aria-label="Interactive Ring-0 Telemetry Simulator">
+          <div class="frag-bar">
+            <div>
+              <strong>a2141-ctl status · v2.0.0</strong>
+              <span style="color: var(--muted); margin-left: 8px;" id="ui-status-tag">Perfil activo · Control por núcleo</span>
+            </div>
+            <div class="frag-modes" role="group" aria-label="Select thermal profile">
+              <button type="button" class="frag-btn is-selected" id="mode-burst" onclick="selectProfile('burst')">USO DIARIO</button>
+              <button type="button" class="frag-btn" id="mode-heavy" onclick="selectProfile('heavy')">CARGA ALTA</button>
+              <button type="button" class="frag-btn" id="mode-stock" onclick="selectProfile('stock')">SIN AJUSTE</button>
+            </div>
+          </div>
+
+          <div class="frag-metrics-row">
+            <div class="frag-cell">
+              <span class="frag-cell-label">Temperatura CPU</span>
+              <span class="frag-cell-val" id="ui-tcxc" style="color: var(--good);">64.73 °C</span>
+            </div>
+            <div class="frag-cell">
+              <span class="frag-cell-label">Consumo CPU</span>
+              <span class="frag-cell-val" id="ui-pc0r">8.60 W</span>
+            </div>
+            <div class="frag-cell">
+              <span class="frag-cell-label">Margen Eléctrico T2</span>
+              <span class="frag-cell-val" id="ui-pz0e">26.9 / 44.3 W</span>
+            </div>
+            <div class="frag-cell">
+              <span class="frag-cell-label">Velocidad Sostenida</span>
+              <span class="frag-cell-val" id="ui-speedlim" style="color: var(--good);">100 % · 80.0 GFLOPs</span>
+            </div>
+          </div>
+
+          <div class="frag-cores" id="ui-cores-grid">
+            <div class="core-tile"><span class="core-tile-id">Núcleo 0</span><span class="core-tile-temp" id="c0-t">63 °C</span><span class="core-tile-mhz" id="c0-m">3200 MHz</span></div>
+            <div class="core-tile"><span class="core-tile-id">Núcleo 1</span><span class="core-tile-temp" id="c1-t">63 °C</span><span class="core-tile-mhz" id="c1-m">4300 MHz</span></div>
+            <div class="core-tile"><span class="core-tile-id">Núcleo 2</span><span class="core-tile-temp" id="c2-t">62 °C</span><span class="core-tile-mhz" id="c2-m">3800 MHz</span></div>
+            <div class="core-tile"><span class="core-tile-id">Núcleo 3</span><span class="core-tile-temp" id="c3-t">62 °C</span><span class="core-tile-mhz" id="c3-m">3800 MHz</span></div>
+            <div class="core-tile"><span class="core-tile-id">Núcleo 4</span><span class="core-tile-temp" id="c4-t">63 °C</span><span class="core-tile-mhz" id="c4-m">4500 MHz</span></div>
+            <div class="core-tile"><span class="core-tile-id">Núcleo 5</span><span class="core-tile-temp" id="c5-t">62 °C</span><span class="core-tile-mhz" id="c5-m">4500 MHz</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 1: Exact Hardware Compatibility & Prerequisites -->
+    <section id="hardware" class="scope-strip reveal-item">
+      <div class="scope-header">
+        <h2 class="lang-es">En qué equipo aplica<br />y qué necesitas</h2>
+        <h2 class="lang-en">Where it applies<br />and what you need</h2>
+        <p class="lang-es" style="max-width: 48ch; color: var(--muted);">
+          De fábrica, macOS prioriza el silencio de los ventiladores. Con el paso de los años o al conectar un monitor externo, eso puede elevar la temperatura. Por precaución, esta herramienta está calibrada únicamente para este modelo exacto.
+        </p>
+        <p class="lang-en" style="max-width: 48ch; color: var(--muted);">
+          By default, macOS prioritizes quiet fans. Over time or with an external display attached, temperatures can climb. For safety, this tool is calibrated strictly for this exact hardware model.
+        </p>
+      </div>
+
+      <div class="scope-grid">
+        <div class="scope-item">
+          <strong>MacBookPro16,1 · Chasis A2141</strong>
+          <p class="lang-es">Únicamente para la MacBook Pro de 16 pulgadas de finales de 2019. No utilizar en equipos con procesadores Apple M1 a M4 ni en modelos de 13 o 15 pulgadas.</p>
+          <p class="lang-en">Strictly for the late 2019 16-inch MacBook Pro. Do not use on Apple Silicon M1 to M4 machines or on 13-inch and 15-inch models.</p>
+        </div>
+        <div class="scope-item">
+          <strong>Intel Core i7-9750H de 6 núcleos</strong>
+          <p class="lang-es">Pensado para el procesador de 6 núcleos físicos y 12 hilos junto a la gráfica dedicada AMD Radeon Pro 5300M o 5500M y el controlador Apple T2.</p>
+          <p class="lang-en">Designed for the 6-core 12-thread processor paired with AMD Radeon Pro 5300M or 5500M graphics and the Apple T2 controller.</p>
+        </div>
+        <div class="scope-item">
+          <strong>macOS + Herramientas de Xcode</strong>
+          <p class="lang-es">Funciona desde macOS Catalina 10.15 hasta macOS Sequoia 15. Requiere tener instaladas las herramientas de línea de comandos con <code>xcode-select --install</code>.</p>
+          <p class="lang-en">Works on macOS Catalina 10.15 through macOS Sequoia 15. Requires Xcode Command Line Tools installed via <code>xcode-select --install</code>.</p>
+        </div>
+        <div class="scope-item">
+          <strong>Permiso en Modo Recuperación</strong>
+          <p class="lang-es">Como se compila en tu propio equipo sin certificado comercial, requiere ejecutar <code>csrutil disable</code> desde Recuperación y autorizar la carga en Ajustes del Sistema.</p>
+          <p class="lang-en">Because it compiles locally from open source without a commercial certificate, it requires running <code>csrutil disable</code> in Recovery and allowing the extension in System Settings.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: Guided Installation (Hick's Law Call & Response) -->
+    <section id="instalacion" class="flow-section grid-12">
+      <div class="flow-col">
+        <h2 class="lang-es reveal-item">Cómo instalar y medir<br />en cuatro pasos</h2>
+        <h2 class="lang-en reveal-item">How to install and measure<br />in four steps</h2>
+
+        <div class="flow-arrow-chain reveal-item">
+          <span class="lang-es">Modo Recuperación: csrutil disable  →  Instalar: sudo ./install.sh  →  Permitir en Privacidad y Seguridad  →  Medir con a2141-ctl</span>
+          <span class="lang-en">Recovery Mode: csrutil disable  →  Install: sudo ./install.sh  →  Allow in Privacy &amp; Security  →  Measure with a2141-ctl</span>
+        </div>
+
+        <div class="exchange-block reveal-item">
+          <p class="exchange-title lang-es">Primero → Reinicia manteniendo presionadas las teclas Cmd + R para entrar en Modo Recuperación, abre Utilidades → Terminal y habilita la carga de extensiones locales:</p>
+          <p class="exchange-title lang-en">First → Restart holding Cmd + R to enter Recovery Mode, open Utilities → Terminal, and allow local kernel extensions:</p>
+          <div class="code-call">
+            <button type="button" class="copy-action" onclick="copyCode(this, 'csrutil disable\nreboot')">Copy</button>
+            <pre><code>csrutil disable
+reboot</code></pre>
+          </div>
+          <div class="code-response" data-ui="true">
+            Successfully disabled System Integrity Protection. Please restart the machine for the changes to take effect.
+          </div>
+        </div>
+
+        <div class="exchange-block reveal-item">
+          <p class="exchange-title lang-es">Segundo → En macOS normal, instala las herramientas de compilación si no las tenías, descarga el repositorio y ejecuta el instalador:</p>
+          <p class="exchange-title lang-en">Second → In normal macOS, install the command line build tools if needed, clone the repository, and run the installer:</p>
+          <div class="code-call">
+            <button type="button" class="copy-action" onclick="copyCode(this, 'xcode-select --install 2>/dev/null || true\ngit clone https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos.git\ncd t2-macbook-pro-16-1-thermal-performance-fix-macos\nchmod +x install.sh uninstall.sh\nsudo ./install.sh')">Copy</button>
+            <pre><code>xcode-select --install 2&gt;/dev/null || true
+git clone https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos.git
+cd t2-macbook-pro-16-1-thermal-performance-fix-macos
+chmod +x install.sh uninstall.sh
+sudo ./install.sh</code></pre>
+          </div>
+          <div class="code-response" data-ui="true">
+            [+] 1. Compilando A2141AsymmetricHWP.kext y utilidad a2141-ctl...<br />
+            [+] 2. Instalando en /Library/Extensions/ y /Library/LaunchDaemons/
+          </div>
+        </div>
+
+        <div class="exchange-block reveal-item">
+          <p class="exchange-title lang-es">Tercero → Si es la primera vez que lo instalas, abre Ajustes del Sistema → Privacidad y Seguridad, toca Permitir junto a A2141AsymmetricHWP, reinicia y ejecuta la medición de 15 segundos para ver tus propios números:</p>
+          <p class="exchange-title lang-en">Third → On first install, open System Settings → Privacy &amp; Security, click Allow next to A2141AsymmetricHWP, restart, and run the 15-second test to see your own numbers:</p>
+          <div class="code-call">
+            <button type="button" class="copy-action" onclick="copyCode(this, 'a2141-ctl status\na2141-ctl benchmark 15')">Copy</button>
+            <pre><code>a2141-ctl status
+a2141-ctl benchmark 15</code></pre>
+          </div>
+          <div class="code-response" data-ui="true">
+            Estado Kext: ACTIVO | Perfil actual: USO DIARIO<br />
+            Temperatura CPU: 64.73 C | Consumo: 8.60 W | Margen T2: 26.87 W / 44.26 W<br />
+            Velocidad sostenida en 15 s: 80.03 GigaFLOPs/s | Límite de reloj: 100 %
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: Interactive Kernel Switches (Sentences with switches) -->
+    <section class="switches-section" aria-label="Kernel Mechanisms">
+      <div class="switch-band is-on" id="band-0">
+        <div class="switch-inner">
+          <div class="switch-text">
+            <p class="switch-statement lang-es">Pausa de la sobreescritura automática de frecuencias en macOS</p>
+            <p class="switch-statement lang-en">Pause automatic frequency overwriting in macOS</p>
+            <p class="switch-consequence lang-es">Qué logramos: Evita que el sistema vuelva a subir todos los núcleos al máximo cada milisegundo cuando el equipo está en reposo; el consumo base baja de 35.4 W a 8.6 W.</p>
+            <p class="switch-consequence lang-en">What it achieves: Prevents the system from pushing all cores to peak clock every millisecond at idle, lowering baseline power from 35.4 W to 8.6 W.</p>
+          </div>
+          <div class="switch-ctrl-wrap">
+            <button type="button" class="kernel-toggle" data-ui="true" aria-pressed="true" aria-label="Toggle XCPM Pause" onclick="toggleBand('band-0', this)">
+              <span class="kernel-toggle-knob"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="switch-band is-on" id="band-1">
+        <div class="switch-inner">
+          <div class="switch-text">
+            <p class="switch-statement lang-es">Reparto escalonado por núcleo: núcleo 0 tranquilo a 3.2 GHz y núcleos 1 al 5 libres</p>
+            <p class="switch-statement lang-en">Staggered per-core limits: core 0 capped at 3.2 GHz while cores 1 to 5 run free</p>
+            <p class="switch-consequence lang-es">Qué logramos: El núcleo 0 atiende las interrupciones del sistema sin recalentar el borde del chip, dejando que el resto de los núcleos alcance hasta 4.5 GHz cuando hace falta.</p>
+            <p class="switch-consequence lang-en">What it achieves: Core 0 handles system interrupts without overheating the edge of the die, letting the remaining cores boost up to 4.5 GHz when needed.</p>
+          </div>
+          <div class="switch-ctrl-wrap">
+            <button type="button" class="kernel-toggle" data-ui="true" aria-pressed="true" aria-label="Toggle Per-Core HWP" onclick="toggleBand('band-1', this)">
+              <span class="kernel-toggle-knob"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="switch-band is-on" id="band-2">
+        <div class="switch-inner">
+          <div class="switch-text">
+            <p class="switch-statement lang-es">Ajuste continuo de potencia según el consumo de la tarjeta gráfica AMD</p>
+            <p class="switch-statement lang-en">Continuous power adjustment based on AMD graphics consumption</p>
+            <p class="switch-consequence lang-es">Qué logramos: Cuando usas un monitor externo y la gráfica dedicada toma unos 18 W, el servicio acompasa el tope del procesador para no saturar el presupuesto eléctrico y mantener el reloj al 100 %.</p>
+            <p class="switch-consequence lang-en">What it achieves: When an external monitor activates the dedicated GPU at roughly 18 W, the service paces CPU power within the shared budget so clock speed stays at 100 %.</p>
+          </div>
+          <div class="switch-ctrl-wrap">
+            <button type="button" class="kernel-toggle" data-ui="true" aria-pressed="true" aria-label="Toggle PZ0E Sync" onclick="toggleBand('band-2', this)">
+              <span class="kernel-toggle-knob"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="switch-band" id="band-3">
+        <div class="switch-inner">
+          <div class="switch-text">
+            <p class="switch-statement lang-es">Curva de ventilación anticipada desde los 55 °C y margen térmico en 97 °C</p>
+            <p class="switch-statement lang-en">Earlier fan curve starting at 55 °C and a 97 °C thermal ceiling</p>
+            <p class="switch-consequence lang-es">Qué logramos: Las turbinas acompañan la subida de temperatura de forma suave antes de que el chasis de aluminio acumule calor excesivo.</p>
+            <p class="switch-consequence lang-en">What it achieves: The fans ramp up smoothly with rising temperature before the aluminum chassis stores excessive heat.</p>
+          </div>
+          <div class="switch-ctrl-wrap">
+            <button type="button" class="kernel-toggle" data-ui="true" aria-pressed="false" aria-label="Toggle TCC Offset" onclick="toggleBand('band-3', this)">
+              <span class="kernel-toggle-knob"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: Real Telemetry Plates & Comparison Matrix -->
+    <section id="telemetria" class="plates-section grid-12">
+      <div class="plates-header reveal-item">
+        <h2 class="lang-es">Mediciones reales<br />y cómo comparar las tuyas</h2>
+        <h2 class="lang-en">Real measurements<br />and how to compare yours</h2>
+        <p class="lang-es" style="color: var(--muted); max-width: 58ch;">
+          Estos son los valores que medimos con precaución en nuestra unidad de pruebas con monitor externo conectado. Con los comandos <code>a2141-ctl status</code> y <code>a2141-ctl benchmark 15</code> puedes registrar exactamente los mismos datos en tu Mac y evaluar si mejora tu rendimiento.
+        </p>
+        <p class="lang-en" style="color: var(--muted); max-width: 58ch;">
+          These are the values measured on our test unit with an external display attached. Using <code>a2141-ctl status</code> and <code>a2141-ctl benchmark 15</code>, you can record the exact same metrics on your Mac and evaluate whether it improves your performance.
+        </p>
+      </div>
+
+      <div class="plates-grid">
+        <figure class="plate-card reveal-item">
+          <img src="assets/plate-1-die-asymmetry.png" width="1200" height="750" alt="Distribución de temperaturas y frecuencias por núcleo en Intel Core i7-9750H" class="shutter-reveal" />
+          <figcaption>
+            <p class="lang-es">Lámina I → Escalonamiento de frecuencias entre el núcleo 0 y los núcleos 1 al 5 para distribuir mejor el calor.</p>
+            <p class="lang-en">Plate I → Frequency staggering between core 0 and cores 1 through 5 for better heat distribution.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="plate-card reveal-item">
+          <img src="assets/plate-2-xcpm-trace.png" width="1200" height="750" loading="lazy" alt="Comportamiento del gestor de frecuencias del kernel frente al control pausado" />
+          <figcaption>
+            <p class="lang-es">Lámina II → Comparación entre la sobreescritura continua de frecuencias y el estado pausado con control estable.</p>
+            <p class="lang-en">Plate II → Comparison between continuous frequency overwriting and the paused state with steady control.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="plate-card reveal-item">
+          <img src="assets/plate-3-pz0e-budget.png" width="1200" height="750" loading="lazy" alt="Reparto del presupuesto eléctrico entre el procesador y la gráfica dedicada Radeon Pro" />
+          <figcaption>
+            <p class="lang-es">Lámina III → Equilibrio de potencia cuando la gráfica dedicada AMD Radeon Pro está encendida junto al procesador.</p>
+            <p class="lang-en">Plate III → Power balance when the dedicated AMD Radeon Pro GPU is active alongside the processor.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="plate-card reveal-item">
+          <img src="assets/plate-4-avx2-telemetry.png" width="1200" height="750" loading="lazy" alt="Curva de temperatura durante una prueba sostenida de 15 segundos en los 12 hilos" />
+          <figcaption>
+            <p class="lang-es">Lámina IV → Prueba de cálculo de 15 segundos en los 12 hilos: 80.03 GigaFLOPs/s a 79.3 °C manteniendo el 100 % de velocidad.</p>
+            <p class="lang-en">Plate IV → 15-second 12-thread compute test: 80.03 GigaFLOPs/s at 79.3 °C while holding 100 % clock speed.</p>
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="telemetry-table-wrap reveal-item">
+        <table>
+          <thead>
+            <tr>
+              <th><span class="lang-es">Medición con a2141-ctl</span><span class="lang-en">Measurement with a2141-ctl</span></th>
+              <th><span class="lang-es">Estado original sin ajuste</span><span class="lang-en">Stock behavior without tuning</span></th>
+              <th><span class="lang-es">Con el ajuste activo</span><span class="lang-en">With tuning active</span></th>
+              <th><span class="lang-es">Diferencia medida</span><span class="lang-en">Measured difference</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="lang-es">Temperatura del procesador en reposo</span><span class="lang-en">Idle processor temperature</span></td>
+              <td class="val-bad">89.84 °C</td>
+              <td class="val-good">64.73 °C</td>
+              <td class="val-good">-25.11 °C</td>
+            </tr>
+            <tr>
+              <td><span class="lang-es">Consumo en reposo con monitor externo</span><span class="lang-en">Idle power draw with external display</span></td>
+              <td class="val-bad">35.45 W</td>
+              <td class="val-good">8.60 W</td>
+              <td class="val-good">-26.85 W</td>
+            </tr>
+            <tr>
+              <td><span class="lang-es">Temperatura máxima en prueba de 15 segundos</span><span class="lang-en">Peak temperature in 15-second test</span></td>
+              <td class="val-bad">99.00 °C</td>
+              <td class="val-good">79.30 °C</td>
+              <td class="val-good">-19.70 °C</td>
+            </tr>
+            <tr>
+              <td><span class="lang-es">Estabilidad de frecuencia del sistema</span><span class="lang-en">System frequency stability</span></td>
+              <td class="val-bad">Recortes por calor</td>
+              <td class="val-good">100 % constante</td>
+              <td class="val-good">Sin caídas</td>
+            </tr>
+            <tr>
+              <td><span class="lang-es">Velocidad de cálculo sostenida en 12 hilos</span><span class="lang-en">Sustained 12-thread compute speed</span></td>
+              <td class="val-bad">68.01 GigaFLOPs/s</td>
+              <td class="val-good">80.03 GigaFLOPs/s</td>
+              <td class="val-good">+17.7 %</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 5: Question Index, One Answer (FAQ) -->
+    <section id="preguntas" class="faq-section grid-12">
+      <div class="faq-list-col reveal-item">
+        <h2 class="lang-es">Dudas habituales<br />antes de probar</h2>
+        <h2 class="lang-en">Common questions<br />before testing</h2>
+
+        <button type="button" class="faq-q-btn is-active" onclick="selectFaq(0, this)">
+          <span class="faq-dot"></span>
+          <span class="lang-es">¿Cómo puedo medir si realmente mejora mi MacBook?</span>
+          <span class="lang-en">How can I measure whether it actually improves my MacBook?</span>
+        </button>
+
+        <button type="button" class="faq-q-btn" onclick="selectFaq(1, this)">
+          <span class="faq-dot"></span>
+          <span class="lang-es">¿Por qué hace falta usar csrutil disable en Modo Recuperación?</span>
+          <span class="lang-en">Why is csrutil disable in Recovery Mode needed?</span>
+        </button>
+
+        <button type="button" class="faq-q-btn" onclick="selectFaq(2, this)">
+          <span class="faq-dot"></span>
+          <span class="lang-es">¿Cómo se desarrolló y qué precauciones tiene el código?</span>
+          <span class="lang-en">How was it developed and what safety precautions does it take?</span>
+        </button>
+
+        <button type="button" class="faq-q-btn" onclick="selectFaq(3, this)">
+          <span class="faq-dot"></span>
+          <span class="lang-es">¿Qué pasa cuando conecto un monitor externo y se enciende la gráfica AMD?</span>
+          <span class="lang-en">What happens when I connect an external display and the AMD GPU turns on?</span>
+        </button>
+
+        <button type="button" class="faq-q-btn" onclick="selectFaq(4, this)">
+          <span class="faq-dot"></span>
+          <span class="lang-es">¿Cómo lo desinstalo si quiero volver todo a como venía de fábrica?</span>
+          <span class="lang-en">How do I uninstall it if I want to return to factory settings?</span>
+        </button>
+      </div>
+
+      <div class="faq-answer-col reveal-item">
+        <p class="faq-answer-text" id="faq-answer-pane">
+          Antes o después de activar el servicio puedes ejecutar el comando a2141-ctl status para ver la temperatura exacta de cada núcleo, los Watts consumidos y las revoluciones de las turbinas. Además, ejecutando a2141-ctl benchmark 15 corres una prueba de cálculo de 15 segundos que te informa la temperatura máxima alcanzada y los GigaFLOPs por segundo obtenidos, para que compares con datos reales en tu propio equipo.
+        </p>
+      </div>
+    </section>
+
+    <!-- SECTION 6: Open Source Sponsorship & Author Split -->
+    <section class="sponsor-section">
+      <div class="grid-12">
+        <div class="sponsor-left reveal-item">
+          <h2 class="lang-es">Sobre este proyecto<br />por Juan Monzón</h2>
+          <h2 class="lang-en">About this project<br />by Juan Monzón</h2>
+          <p class="lang-es" style="color: var(--muted);">
+            Soy <strong>Juan José Monzón · @mylnzon58</strong>, desarrollador desde Argentina. Armé esta herramienta con humildad y precaución, apoyándome en inteligencia artificial para profundizar el análisis de bajo nivel y probar soluciones reales sobre mi propia MacBook Pro. Si al medirla en tu equipo te ayuda a trabajar más fresco y estable, puedes apoyar mis proyectos abiertos.
+          </p>
+          <p class="lang-en" style="color: var(--muted);">
+            I am <strong>Juan José Monzón · @mylnzon58</strong>, a developer from Argentina. I built this tool with humility and care, using AI to assist with deep low-level analysis and testing on my own MacBook Pro. If measuring it on your machine helps you work cooler and more reliably, you can support my open-source work.
+          </p>
+        </div>
+
+        <div class="sponsor-right reveal-item" data-ui="true">
+          <strong style="font-size: var(--step-lead); color: var(--ink);">
+            <span class="lang-es">Apoyo al proyecto y contacto</span>
+            <span class="lang-en">Project support &amp; contact</span>
+          </strong>
+          <div class="sponsor-links-grid">
+            <a href="https://github.com/sponsors/mylnzon58" target="_blank" rel="noopener" class="sponsor-link-box">
+              <strong>GitHub Sponsors →</strong>
+              <span>github.com/sponsors/mylnzon58</span>
+            </a>
+            <a href="https://www.patreon.com/JuanjoClassic" target="_blank" rel="noopener" class="sponsor-link-box">
+              <strong>Patreon →</strong>
+              <span>patreon.com/JuanjoClassic</span>
+            </a>
+            <a href="https://tecito.app/juanjoclassic" target="_blank" rel="noopener" class="sponsor-link-box">
+              <strong>Invitar un Tecito →</strong>
+              <span>tecito.app/juanjoclassic</span>
+            </a>
+            <a href="https://www.linkedin.com/in/juan-m-97b85681/" target="_blank" rel="noopener" class="sponsor-link-box">
+              <strong>LinkedIn →</strong>
+              <span>Juan José Monzón</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER OF TILES -->
+  <footer class="footer-board">
+    <div class="f-tile f-tile-statement">
+      <p class="lang-es">Herramienta abierta de control térmico y medición en macOS para MacBook Pro 16,1 A2141.</p>
+      <p class="lang-en">Open-source macOS thermal control and measurement tool for MacBook Pro 16,1 A2141.</p>
+      <span style="font-size: var(--step-small); color: var(--muted);">Licencia MIT · Juan José Monzón · @mylnzon58</span>
+    </div>
+
+    <div class="f-tile f-tile-nav">
+      <strong style="font-size: var(--step-small); color: var(--muted);">Navegación y Herramientas</strong>
+      <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 12px;">
+        <a href="https://github.com/mylnzon58/a2141-macos-thermal-monitor" style="font-size: var(--step-small); color: var(--accent);">App Visual: A2141 Monitor →</a>
+        <a href="https://mylnzon58.github.io/a2141-macos-thermal-monitor/" style="font-size: var(--step-small);">Web de A2141 Monitor</a>
+        <a href="#instalacion" style="font-size: var(--step-small);">Instalación en 4 pasos</a>
+        <a href="#telemetria" style="font-size: var(--step-small);">Cómo medir resultados</a>
+      </div>
+    </div>
+
+    <div class="f-tile f-tile-arch">
+      <strong style="font-size: var(--step-small); color: var(--muted);">Equipo específico</strong>
+      <span style="font-size: var(--step-small); color: var(--ink);">MacBookPro16,1 · A2141 · Core i7-9750H · macOS</span>
+    </div>
+
+    <div class="f-tile f-tile-contact">
+      <strong style="font-size: var(--step-small); color: var(--muted);">Contacto</strong>
+      <a href="mailto:mylnzon58@gmail.com" style="font-size: var(--step-body); color: var(--accent);">mylnzon58@gmail.com</a>
+    </div>
+
+    <div class="f-tile f-tile-wordmark">
+      <span>mylnzon58</span>
+    </div>
+
+    <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos" class="f-tile f-tile-cta">
+      <span class="lang-es">Ver repositorio en GitHub →</span>
+      <span class="lang-en">View repository on GitHub →</span>
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true" style="align-self: flex-end;">
+        <path d="M7 29L29 7M29 7H11M29 7V25" stroke="#0c0a08" stroke-width="4" />
+      </svg>
+    </a>
+  </footer>
+
+  <script>
+    var currentLang = 'es';
+
+    var profileData = {
+      burst: {
+        tag: 'Ajuste activo · Modo uso diario',
+        tcxc: '64.73 °C',
+        tcxcColor: 'var(--good)',
+        pc0r: '8.60 W',
+        pz0e: '26.9 / 44.3 W',
+        speed: '100 % · 80.0 GFLOPs',
+        speedColor: 'var(--good)',
+        cores: [
+          ['63 °C', '3200 MHz'],
+          ['63 °C', '4300 MHz'],
+          ['62 °C', '3800 MHz'],
+          ['62 °C', '3800 MHz'],
+          ['63 °C', '4500 MHz'],
+          ['62 °C', '4500 MHz']
+        ]
+      },
+      heavy: {
+        tag: 'Ajuste activo · Modo carga sostenida',
+        tcxc: '78.40 °C',
+        tcxcColor: 'var(--accent)',
+        pc0r: '33.90 W',
+        pz0e: '52.1 / 54.0 W',
+        speed: '100 % · 80.0 GFLOPs',
+        speedColor: 'var(--good)',
+        cores: [
+          ['78 °C', '2900 MHz'],
+          ['76 °C', '3500 MHz'],
+          ['78 °C', '3300 MHz'],
+          ['78 °C', '3300 MHz'],
+          ['74 °C', '3600 MHz'],
+          ['78 °C', '3600 MHz']
+        ]
+      },
+      stock: {
+        tag: 'Estado original sin ajuste',
+        tcxc: '99.00 °C',
+        tcxcColor: 'var(--warn)',
+        pc0r: '58.90 W',
+        pz0e: '57.9 / 36.1 W',
+        speed: 'Con recortes por calor',
+        speedColor: 'var(--warn)',
+        cores: [
+          ['99 °C', '4500 MHz'],
+          ['94 °C', '4500 MHz'],
+          ['96 °C', '4500 MHz'],
+          ['95 °C', '4500 MHz'],
+          ['91 °C', '4500 MHz'],
+          ['93 °C', '4500 MHz']
+        ]
+      }
+    };
+
+    var faqAnswers = {
+      es: [
+        'Antes o después de activar el servicio puedes ejecutar el comando a2141-ctl status para ver la temperatura exacta de cada núcleo, los Watts consumidos y las revoluciones de las turbinas. Además, ejecutando a2141-ctl benchmark 15 corres una prueba de cálculo de 15 segundos que te informa la temperatura máxima alcanzada y los GigaFLOPs por segundo obtenidos, para que compares con datos reales en tu propio equipo.',
+        'Porque ajustar los límites de frecuencia por núcleo desde el kernel requiere cargar una extensión .kext compilada en tu propia Mac. Como es un proyecto abierto e independiente y no cuenta con un certificado empresarial de fabricante, macOS pide desactivar esa restricción ejecutando csrutil disable desde el Modo Recuperación.',
+        'Todas las pruebas se hicieron con precaución, combinando herramientas de inteligencia artificial para analizar a fondo el comportamiento del procesador Intel Core i7-9750H con mediciones reales paso a paso. El código nunca desactiva las protecciones térmicas físicas de fábrica y verifica que el modelo sea exactamente una MacBookPro16,1 antes de actuar.',
+        'Al conectar un monitor externo se enciende de forma permanente la gráfica dedicada AMD Radeon Pro, que toma cerca de 18 W del presupuesto total del equipo. El servicio lee en tiempo real el margen disponible en el chip T2 y acompasa el consumo del procesador para que ambos trabajen en equilibrio sin sobrecalentar el chasis.',
+        'En cualquier momento puedes ejecutar sudo ./uninstall.sh desde la carpeta del proyecto. Ese comando detiene el servicio, descarga la extensión, borra los archivos instalados y devuelve el manejo de frecuencias y ventiladores al comportamiento original de macOS.'
+      ],
+      en: [
+        'Before or after enabling the service, you can run a2141-ctl status to check per-core temperatures, power draw in Watts, and fan speeds. Running a2141-ctl benchmark 15 executes a 15-second compute test that reports peak temperature and sustained GigaFLOPs per second so you can compare objective numbers on your own Mac.',
+        'Adjusting per-core frequency ceilings from the kernel requires loading a locally compiled .kext extension. Because this is an independent open-source project without a commercial hardware vendor certificate, macOS requires running csrutil disable in Recovery Mode.',
+        'All tests were carried out with caution, combining AI tools for deep low-level analysis of the Intel Core i7-9750H with step-by-step hardware measurements. The code never disables hardware thermal safety limits and checks that the machine is a MacBookPro16,1 before running.',
+        'Connecting an external display keeps the dedicated AMD Radeon Pro GPU active at roughly 18 W. The service reads the remaining power budget from the T2 controller in real time and paces CPU power so both stay balanced without overheating the chassis.',
+        'At any time you can run sudo ./uninstall.sh from the project folder. It stops the background service, unloads the extension, removes the installed files, and returns frequency and fan management to stock macOS behavior.'
+      ]
+    };
+    var currentFaqIndex = 0;
+
+    function selectProfile(mode) {
+      var d = profileData[mode];
+      if (!d) return;
+      document.getElementById('mode-burst').classList.toggle('is-selected', mode === 'burst');
+      document.getElementById('mode-heavy').classList.toggle('is-selected', mode === 'heavy');
+      document.getElementById('mode-stock').classList.toggle('is-selected', mode === 'stock');
+
+      document.getElementById('ui-status-tag').textContent = d.tag;
+      var tcxcEl = document.getElementById('ui-tcxc');
+      tcxcEl.textContent = d.tcxc;
+      tcxcEl.style.color = d.tcxcColor;
+      document.getElementById('ui-pc0r').textContent = d.pc0r;
+      document.getElementById('ui-pz0e').textContent = d.pz0e;
+      var spEl = document.getElementById('ui-speedlim');
+      spEl.textContent = d.speed;
+      spEl.style.color = d.speedColor;
+
+      for (var i = 0; i < 6; i++) {
+        document.getElementById('c' + i + '-t').textContent = d.cores[i][0];
+        document.getElementById('c' + i + '-m').textContent = d.cores[i][1];
+      }
+    }
+
+    function toggleBand(id, btn) {
+      var band = document.getElementById(id);
+      if (!band) return;
+      var isOn = band.classList.toggle('is-on');
+      btn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+    }
+
+    function selectFaq(idx, btn) {
+      currentFaqIndex = idx;
+      var buttons = document.querySelectorAll('.faq-q-btn');
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove('is-active');
+      }
+      if (btn) btn.classList.add('is-active');
+      var pane = document.getElementById('faq-answer-pane');
+      if (pane) {
+        pane.textContent = faqAnswers[currentLang][idx];
+      }
+    }
+
+    function setLanguage(lang) {
+      currentLang = (lang === 'en') ? 'en' : 'es';
+      document.body.classList.toggle('mode-en', currentLang === 'en');
+      document.documentElement.lang = currentLang;
+      document.getElementById('btn-lang-es').classList.toggle('active', currentLang === 'es');
+      document.getElementById('btn-lang-en').classList.toggle('active', currentLang === 'en');
+      var pane = document.getElementById('faq-answer-pane');
+      if (pane) {
+        pane.textContent = faqAnswers[currentLang][currentFaqIndex];
+      }
+    }
+
+    function copyCode(btn, text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text);
+      }
+      var prev = btn.textContent;
+      btn.textContent = (currentLang === 'en') ? 'Copied' : 'Copiado';
+      setTimeout(function() { btn.textContent = prev; }, 1400);
+    }
+
+    (function initMotion() {
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+      }
+      var items = document.querySelectorAll('.reveal-item');
+      if (!('IntersectionObserver' in window)) return;
+      var obs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      items.forEach(function(el) {
+        var rect = el.getBoundingClientRect();
+        if (rect.top > window.innerHeight) {
+          el.classList.add('will-animate');
+          obs.observe(el);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
