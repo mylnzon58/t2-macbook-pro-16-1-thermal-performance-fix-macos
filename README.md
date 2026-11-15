@@ -1,8 +1,12 @@
-# Control Térmico y de Rendimiento para MacBook Pro 16" 2019 en macOS
+<p align="left">
+  <img src="docs/assets/logo-thermalboost.png" width="112" height="112" alt="Logo de A2141 ThermalBoost Driver" />
+</p>
+
+# A2141 ThermalBoost — Driver de Control Térmico y Rendimiento para MacBook Pro 16" 2019 (A2141 · Core i7-9750H)
 
 **Autor:** Juan Monzón · `@mylnzon58`  
 **Web y guía paso a paso:** https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/  
-**Aplicación visual de monitoreo en tiempo real:** [A2141 Monitor (`mylnzon58/a2141-macos-thermal-monitor`)](https://github.com/mylnzon58/a2141-macos-thermal-monitor) · [Web del Monitor](https://mylnzon58.github.io/a2141-macos-thermal-monitor/)  
+**Aplicación visual de monitoreo en tiempo real:** [A2141 ThermalMonitor (`mylnzon58/a2141-macos-thermal-monitor`)](https://github.com/mylnzon58/a2141-macos-thermal-monitor) · [Web del Monitor](https://mylnzon58.github.io/a2141-macos-thermal-monitor/)  
 **Licencia:** MIT  
 
 ---
@@ -96,14 +100,14 @@ chmod +x install.sh uninstall.sh
 
 ## Descargas directas ya compiladas (Sin necesidad de compilar)
 
-Tanto el driver de kernel (`A2141AsymmetricHWP.kext`), el demonio y medidor (`a2141-ctl`) como el monitor visual (`A2141Monitor.app`) ya están precompilados e incluidos tanto en la sección de **Releases** como dentro de la carpeta `prebuilt/` del repositorio:
+Tanto el driver de kernel **A2141 ThermalBoost** (`A2141AsymmetricHWP.kext`), el demonio y medidor (`a2141-ctl`) como el monitor visual **A2141 ThermalMonitor** (`A2141Monitor.app`) ya están precompilados con sus íconos nativos de macOS e incluidos tanto en **Releases** como en la carpeta `prebuilt/`:
 
-- **Instalador completo en un clic (`.pkg` — Instala Driver + Demonio + Monitor Visual):**  
-  **[Descargar A2141-Thermal-Fix-v2.0.0-Installer.pkg](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-Thermal-Fix-v2.0.0-Installer.pkg)**
+- **Instalador completo en un clic (`.pkg` — Instala Driver A2141 ThermalBoost + Demonio + Monitor Visual):**  
+  **[Descargar A2141-ThermalBoost-v2.1.0-Installer.pkg](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-ThermalBoost-v2.1.0-Installer.pkg)**
 - **Paquete completo precompilado (`.zip` con binarios e instalador):**  
-  **[Descargar A2141-Thermal-Fix-v2.0.0-Precompiled-macOS.zip](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-Thermal-Fix-v2.0.0-Precompiled-macOS.zip)**
-- **Solo Monitor Visual (`A2141 Monitor` en `.dmg`):**  
-  **[Descargar A2141Monitor-v1.0.0-macOS-x86_64.dmg](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141Monitor-v1.0.0-macOS-x86_64.dmg)**
+  **[Descargar A2141-ThermalBoost-v2.1.0-Precompiled-macOS.zip](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-ThermalBoost-v2.1.0-Precompiled-macOS.zip)**
+- **Solo Monitor Visual (`A2141 ThermalMonitor` en `.dmg`):**  
+  **[Descargar A2141-ThermalMonitor-v1.1.0-macOS.dmg](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-ThermalMonitor-v1.1.0-macOS.dmg)**
 
 ---
 
@@ -134,7 +138,7 @@ Paso 1: Modo Recuperación  →  Paso 2: Instalar (.pkg o ./install.sh)  →  Pa
 
 ### Paso 2 → Instalar con el archivo `.pkg` o desde Terminal
 
-**Opción A (Directa sin Terminal):** Descarga y abre **[A2141-Thermal-Fix-v2.0.0-Installer.pkg](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-Thermal-Fix-v2.0.0-Installer.pkg)**. Instalará automáticamente el driver, el servicio en segundo plano y la aplicación `A2141 Monitor` en tu carpeta de Aplicaciones.
+**Opción A (Directa sin Terminal):** Descarga y abre **[A2141-ThermalBoost-v2.1.0-Installer.pkg](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-ThermalBoost-v2.1.0-Installer.pkg)**. Instalará automáticamente el driver **A2141 ThermalBoost**, el servicio en segundo plano y la aplicación **A2141 ThermalMonitor** en tu carpeta de Aplicaciones.
 
 **Opción B (Por Terminal usando los binarios precompilados de `prebuilt/`):**
 ```bash

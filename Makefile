@@ -29,9 +29,10 @@ all: kext cli verify
 
 kext: $(KEXT_BIN)
 
-$(KEXT_BIN): kext/A2141AsymmetricHWP.cpp kext/A2141AsymmetricHWP.hpp kext/Info.plist include/a2141_shared.h
-	@mkdir -p $(KEXT_BUNDLE)/Contents/MacOS
+$(KEXT_BIN): kext/A2141AsymmetricHWP.cpp kext/A2141AsymmetricHWP.hpp kext/Info.plist include/a2141_shared.h resources/DriverIcon.icns
+	@mkdir -p $(KEXT_BUNDLE)/Contents/MacOS $(KEXT_BUNDLE)/Contents/Resources
 	@cp kext/Info.plist $(KEXT_BUNDLE)/Contents/Info.plist
+	@cp resources/DriverIcon.icns $(KEXT_BUNDLE)/Contents/Resources/DriverIcon.icns
 	$(CXX) $(KEXT_CXXFLAGS) -c kext/A2141AsymmetricHWP.cpp -o $(BUILD_DIR)/A2141AsymmetricHWP.o
 	$(CXX) $(KEXT_LDFLAGS) $(BUILD_DIR)/A2141AsymmetricHWP.o -o $(KEXT_BIN)
 

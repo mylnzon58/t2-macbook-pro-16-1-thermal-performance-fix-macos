@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MacBook Pro 16,1 (A2141) macOS Thermal &amp; Ring-0 HWP Driver</title>
-  <meta name="description" content="Driver Ring-0 (.kext) y demonio AppleSMC para MacBook Pro 16,1 (2019, A2141, Core i7-9750H). Reduce 25 °C en reposo y 19.7 °C en carga AVX2 sin throttling." />
+  <title>A2141 ThermalBoost — MacBook Pro 16,1 (2019) macOS Thermal &amp; Kernel Driver</title>
+  <meta name="description" content="A2141 ThermalBoost: Driver de kernel (.kext) y control térmico para MacBook Pro 16,1 (2019, A2141, Core i7-9750H). Reduce 25 °C en reposo y 19.7 °C en carga AVX2 sin throttling." />
   <meta name="author" content="Juan José Monzón (@mylnzon58)" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
   <link rel="canonical" href="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/" />
   <link rel="alternate" hreflang="es" href="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/" />
   <link rel="alternate" hreflang="en" href="https://mylnzon58.github.io/t2-macbook-pro-16-1-thermal-performance-fix-macos/?lang=en" />
@@ -937,11 +938,14 @@
 <body>
 
   <header class="top-nav">
-    <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos" class="wordmark">mylnzon58 / A2141-Ring0</a>
+    <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos" class="wordmark" style="display:flex;align-items:center;gap:12px;">
+      <img src="assets/logo-thermalboost.png" width="38" height="38" alt="A2141 ThermalBoost Logo" />
+      <span>mylnzon58 / A2141 ThermalBoost</span>
+    </a>
     <nav class="nav-links" aria-label="Primary Navigation">
       <a href="#hardware"><span class="lang-es">Compatibilidad</span><span class="lang-en">Hardware</span></a>
       <a href="#instalacion"><span class="lang-es">Instalación</span><span class="lang-en">Install</span></a>
-      <a href="#telemetria"><span class="lang-es"> Pruebas</span><span class="lang-en">Telemetry</span></a>
+      <a href="#telemetria"><span class="lang-es">Pruebas</span><span class="lang-en">Telemetry</span></a>
       <a href="#preguntas"><span class="lang-es">Preguntas</span><span class="lang-en">Questions</span></a>
       <button type="button" class="lang-toggle active" id="btn-lang-es" onclick="setLanguage('es')">ES</button>
       <button type="button" class="lang-toggle" id="btn-lang-en" onclick="setLanguage('en')">EN</button>
@@ -953,26 +957,30 @@
     <!-- HERO: Fragment on a shaped stage -->
     <section class="hero-section grid-12">
       <div class="hero-copy reveal-item">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;">
+          <img src="assets/logo-thermalboost.png" width="76" height="76" alt="Ícono de A2141 ThermalBoost Driver" />
+          <span style="color:var(--accent);font-weight:700;letter-spacing:0.04em;">A2141 THERMALBOOST · v2.1.0</span>
+        </div>
         <h1>
-          <span class="lang-es">Control térmico y medición<br />para MacBook A2141</span>
-          <span class="lang-en">Thermal control and testing<br />for MacBook A2141</span>
+          <span class="lang-es">A2141 ThermalBoost<br />Driver para MacBook 16"</span>
+          <span class="lang-en">A2141 ThermalBoost<br />Driver for MacBook 16"</span>
         </h1>
 
         <p class="hero-lead lang-es">
-          Herramienta abierta de prueba y medición para la <strong>MacBook Pro de 16 pulgadas de finales de 2019 con procesador Core i7-9750H</strong>. Desarrollada con precaución, combinando análisis detallado de bajo nivel con el apoyo de inteligencia artificial para que puedas medir temperatura y velocidad antes y después en tu propio equipo.
+          Driver de control térmico por núcleo y arbitraje CPU+GPU para la <strong>MacBook Pro de 16 pulgadas de finales de 2019 (A2141 · Core i7-9750H)</strong>. Desarrollado con precaución y análisis detallado para bajar temperaturas sin perder potencia e incluye <strong>A2141 ThermalMonitor</strong> para medir antes y después.
         </p>
         <p class="hero-lead lang-en">
-          Open-source testing and measurement tool for the <strong>late 2019 16-inch MacBook Pro with Core i7-9750H</strong>. Built with caution through detailed low-level analysis assisted by AI, allowing you to measure temperatures and sustained speed before and after on your own machine.
+          Per-core thermal control and CPU+GPU power arbitration driver for the <strong>late 2019 16-inch MacBook Pro (A2141 · Core i7-9750H)</strong>. Built with caution and detailed low-level analysis to lower temperatures without losing performance, including <strong>A2141 ThermalMonitor</strong> to measure before and after.
         </p>
 
         <div class="hero-actions">
-          <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-Thermal-Fix-v2.0.0-Installer.pkg" class="btn-primary">
+          <a href="https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-ThermalBoost-v2.1.0-Installer.pkg" class="btn-primary">
             <span class="lang-es">Descargar Instalador .PKG Compilado</span>
             <span class="lang-en">Download Compiled .PKG Installer</span>
           </a>
-          <a href="https://github.com/mylnzon58/a2141-macos-thermal-monitor/releases/download/v1.0.0/A2141Monitor-v1.0.0-macOS-x86_64.dmg" class="text-link">
-            <span class="lang-es">Descargar App Monitor (.DMG) →</span>
-            <span class="lang-en">Download Monitor App (.DMG) →</span>
+          <a href="https://github.com/mylnzon58/a2141-macos-thermal-monitor/releases/download/v1.0.0/A2141-ThermalMonitor-v1.1.0-macOS.dmg" class="text-link">
+            <span class="lang-es">Descargar A2141 ThermalMonitor (.DMG) →</span>
+            <span class="lang-en">Download A2141 ThermalMonitor (.DMG) →</span>
           </a>
         </div>
       </div>

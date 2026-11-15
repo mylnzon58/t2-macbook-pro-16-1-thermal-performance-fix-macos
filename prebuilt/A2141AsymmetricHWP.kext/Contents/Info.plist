@@ -11,13 +11,17 @@
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>A2141AsymmetricHWP</string>
+    <string>A2141 ThermalBoost Driver</string>
+    <key>CFBundleDisplayName</key>
+    <string>A2141 ThermalBoost Driver</string>
+    <key>CFBundleIconFile</key>
+    <string>DriverIcon</string>
     <key>CFBundlePackageType</key>
     <string>KEXT</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>2.1.0</string>
     <key>CFBundleVersion</key>
-    <string>1.0.0</string>
+    <string>2.1.0</string>
     <key>IOKitPersonalities</key>
     <dict>
         <key>A2141AsymmetricHWP</key>
