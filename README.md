@@ -28,7 +28,8 @@ Por precaución, el código verifica el hardware antes de actuar y **solo debe u
 ```
 Modelo           →  MacBook Pro de 16 pulgadas de finales de 2019
 Identificador    →  MacBookPro16,1 · Chasis A2141
-Procesador       →  Intel Core i7-9750H de 6 núcleos y 12 hilos
+Procesador       →  Intel Core i7-9750H (6 núcleos / 12 hilos) — Probado y calibrado en equipo real
+                    Intel Core i9-9880H / i9-9980HK (8 núcleos / 16 hilos) — Compilación dedicada incluida (prebuilt-i9) para probar
 Gráficos         →  AMD Radeon Pro 5300M o 5500M + Intel UHD Graphics 630
 Controlador      →  Chip Apple T2
 Sistema          →  macOS Catalina 10.15 hasta macOS Sequoia 15 o superior
@@ -102,9 +103,11 @@ chmod +x install.sh uninstall.sh
 
 Tanto el driver de kernel **A2141 ThermalBoost** (`A2141AsymmetricHWP.kext`), el demonio y medidor (`a2141-ctl`) como el monitor visual **A2141 ThermalMonitor** (`A2141Monitor.app`) ya están precompilados con sus íconos nativos de macOS e incluidos tanto en **Releases** como en la carpeta `prebuilt/`:
 
-- **Instalador completo en un clic (`.pkg` — Instala Driver A2141 ThermalBoost + Demonio + Monitor Visual):**  
+- **Instalador completo Core i7-9750H (`.pkg` — 6 núcleos / 12 hilos, probado en hardware real):**  
   **[Descargar A2141-ThermalBoost-v2.1.0-Installer.pkg](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-ThermalBoost-v2.1.0-Installer.pkg)**
-- **Paquete completo precompilado (`.zip` con binarios e instalador):**  
+- **Instalador completo Core i9-9880H / 9980HK (`.pkg` — 8 núcleos / 16 hilos, compilación dedicada i9):**  
+  **[Descargar A2141-ThermalBoost-i9-v2.1.0-Installer.pkg](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-ThermalBoost-i9-v2.1.0-Installer.pkg)**
+- **Paquete completo precompilado (`.zip` con binarios i7 + i9 e instalador automático):**  
   **[Descargar A2141-ThermalBoost-v2.1.0-Precompiled-macOS.zip](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-ThermalBoost-v2.1.0-Precompiled-macOS.zip)**
 - **Solo Monitor Visual (`A2141 ThermalMonitor` en `.dmg`):**  
   **[Descargar A2141-ThermalMonitor-v1.1.0-macOS.dmg](https://github.com/mylnzon58/t2-macbook-pro-16-1-thermal-performance-fix-macos/releases/download/v2.0.0/A2141-ThermalMonitor-v1.1.0-macOS.dmg)**

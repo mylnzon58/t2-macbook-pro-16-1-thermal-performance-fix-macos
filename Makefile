@@ -23,9 +23,14 @@ KEXT_LDFLAGS  := -arch x86_64 $(KEXT_MIN) -Wl,-kext -nostdlib -lkmodc++ -lkmod -
 CLI_CFLAGS    := -arch x86_64 $(CLI_MIN) -mavx2 -mfma -Iinclude -Wall -Wextra -Werror -O3 -pthread
 CLI_LDFLAGS   := -arch x86_64 $(CLI_MIN) -framework IOKit -framework CoreFoundation -lpthread
 
-.PHONY: all kext cli verify clean
+.PHONY: all i9 kext cli verify clean
 
 all: kext cli verify
+
+i9:
+	@$(MAKE) BUILD_DIR=build-i9 \
+		KEXT_CXXFLAGS="$(KEXT_CXXFLAGS) -DA2141_MODEL_I9=1" \
+		CLI_CFLAGS="$(CLI_CFLAGS) -DA2141_MODEL_I9=1" all
 
 kext: $(KEXT_BIN)
 
@@ -49,4 +54,4 @@ verify: $(KEXT_BIN) $(CLI_BIN)
 	@rm -rf electron-app/out 2>/dev/null || true
 
 clean:
-	rm -rf $(BUILD_DIR) electron-app/out
+	rm -rf $(BUILD_DIR) build-i9 electron-app/out

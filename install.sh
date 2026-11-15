@@ -21,30 +21,42 @@ PLIST_NAME="com.juanmonzon.a2141-hwp.plist"
 PLIST_DEST="/Library/LaunchDaemons/$PLIST_NAME"
 CLI_DEST="/usr/local/bin/a2141-ctl"
 
-echo "[+] 1. Preparando binarios de A2141AsymmetricHWP.kext (Ring-0) y a2141-ctl (Daemon/CLI)..."
+PHYS_CPUS="$(sysctl -n hw.physicalcpu 2>/dev/null || echo 6)"
+MODEL_TAG="i7 (6C/12T)"
+PREBUILT_SUBDIR="prebuilt"
+MAKE_TARGET="all"
+BUILD_SUBDIR="build"
+if [[ "$PHYS_CPUS" -eq 8 ]]; then
+    MODEL_TAG="i9 (8C/16T)"
+    PREBUILT_SUBDIR="prebuilt-i9"
+    MAKE_TARGET="i9"
+    BUILD_SUBDIR="build-i9"
+fi
+
+echo "[+] 1. Preparando binarios para MacBookPro16,1 A2141 [$MODEL_TAG]..."
 if [[ "${1:-}" == "--compile" ]]; then
-    echo "    -> Compilando desde código fuente (--compile)..."
+    echo "    -> Compilando desde código fuente (--compile, $MAKE_TARGET)..."
     make -C "$SCRIPT_DIR" clean
-    make -C "$SCRIPT_DIR" all
-    BIN_DIR="$SCRIPT_DIR/build"
-elif [[ -f "$SCRIPT_DIR/prebuilt/a2141-ctl" && -d "$SCRIPT_DIR/prebuilt/$KEXT_NAME" ]]; then
-    echo "    -> Usando binarios precompilados listos para instalar (prebuilt/)..."
-    BIN_DIR="$SCRIPT_DIR/prebuilt"
+    make -C "$SCRIPT_DIR" "$MAKE_TARGET"
+    BIN_DIR="$SCRIPT_DIR/$BUILD_SUBDIR"
+elif [[ -f "$SCRIPT_DIR/$PREBUILT_SUBDIR/a2141-ctl" && -d "$SCRIPT_DIR/$PREBUILT_SUBDIR/$KEXT_NAME" ]]; then
+    echo "    -> Usando binarios precompilados listos para instalar ($PREBUILT_SUBDIR/)..."
+    BIN_DIR="$SCRIPT_DIR/$PREBUILT_SUBDIR"
     # Si tiene herramientas de Xcode instaladas y desea recompilar el kext para su kernel exacto:
     if command -v xcrun >/dev/null 2>&1 && [[ -d "$(xcrun --show-sdk-path 2>/dev/null)/System/Library/Frameworks/Kernel.framework" ]]; then
-        if make -C "$SCRIPT_DIR" all >/dev/null 2>&1; then
+        if make -C "$SCRIPT_DIR" "$MAKE_TARGET" >/dev/null 2>&1; then
             echo "    -> Binario ajustado automáticamente al kernel actual ($(uname -r))."
-            BIN_DIR="$SCRIPT_DIR/build"
+            BIN_DIR="$SCRIPT_DIR/$BUILD_SUBDIR"
         fi
     fi
-elif [[ -f "$SCRIPT_DIR/build/a2141-ctl" && -d "$SCRIPT_DIR/build/$KEXT_NAME" ]]; then
-    echo "    -> Usando binarios existentes en build/..."
-    BIN_DIR="$SCRIPT_DIR/build"
+elif [[ -f "$SCRIPT_DIR/$BUILD_SUBDIR/a2141-ctl" && -d "$SCRIPT_DIR/$BUILD_SUBDIR/$KEXT_NAME" ]]; then
+    echo "    -> Usando binarios existentes en $BUILD_SUBDIR/..."
+    BIN_DIR="$SCRIPT_DIR/$BUILD_SUBDIR"
 else
-    echo "    -> Compilando desde código fuente..."
+    echo "    -> Compilando desde código fuente ($MAKE_TARGET)..."
     make -C "$SCRIPT_DIR" clean
-    make -C "$SCRIPT_DIR" all
-    BIN_DIR="$SCRIPT_DIR/build"
+    make -C "$SCRIPT_DIR" "$MAKE_TARGET"
+    BIN_DIR="$SCRIPT_DIR/$BUILD_SUBDIR"
 fi
 
 echo "[+] 2. Deteniendo instancias previas del demonio y procesos parasitos (AVGTuneUp)..."
@@ -67,8 +79,15 @@ chmod -R 755 "$KEXT_DEST"
 chmod 644 "$KEXT_DEST/Contents/Info.plist"
 xattr -cr "$KEXT_DEST" 2>/dev/null || true
 
-if [[ -d "$SCRIPT_DIR/prebuilt/A2141Monitor.app" ]]; then
-    echo "[+] 4b. Instalando aplicación visual A2141 Monitor en /Applications/A2141Monitor.app..."
+if [[ -d "$SCRIPT_DIR/$PREBUILT_SUBDIR/A2141Monitor.app" ]]; then
+    echo "[+] 4b. Instalando aplicación visual A2141 ThermalMonitor [$MODEL_TAG] en /Applications/A2141Monitor.app..."
+    rm -rf /Applications/A2141Monitor.app
+    cp -R "$SCRIPT_DIR/$PREBUILT_SUBDIR/A2141Monitor.app" /Applications/A2141Monitor.app
+    chown -R root:wheel /Applications/A2141Monitor.app
+    chmod -R 755 /Applications/A2141Monitor.app
+    xattr -cr /Applications/A2141Monitor.app 2>/dev/null || true
+elif [[ -d "$SCRIPT_DIR/prebuilt/A2141Monitor.app" ]]; then
+    echo "[+] 4b. Instalando aplicación visual A2141 ThermalMonitor en /Applications/A2141Monitor.app..."
     rm -rf /Applications/A2141Monitor.app
     cp -R "$SCRIPT_DIR/prebuilt/A2141Monitor.app" /Applications/A2141Monitor.app
     chown -R root:wheel /Applications/A2141Monitor.app

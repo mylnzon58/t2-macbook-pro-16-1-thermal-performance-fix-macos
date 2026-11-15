@@ -16,9 +16,14 @@
 #include <stdint.h>
 #endif
 
-#define A2141_DRIVER_VERSION        "2.0.0"
+#define A2141_DRIVER_VERSION        "2.1.0"
+#ifdef A2141_MODEL_I9
+#define A2141_PHYSICAL_CORES        8
+#define A2141_LOGICAL_CPUS          16
+#else
 #define A2141_PHYSICAL_CORES        6
 #define A2141_LOGICAL_CPUS          12
+#endif
 
 /* --- Architectural & Model-Specific Registers (Intel Coffee Lake 14nm) --- */
 #define MSR_IA32_PERF_STATUS            0x198ULL
@@ -71,6 +76,24 @@ typedef enum {
  * - Core 4: Coolest physical core on die (4.50 GHz / 3.60 GHz)
  * - Core 5: Strong heatsink contact (4.50 GHz / 3.60 GHz)
  */
+#ifdef A2141_MODEL_I9
+/*
+ * Core i9-9880H / i9-9980HK (8-Core / 16-Thread) Default Per-Core Max Ratio Tables
+ * Protects Core 0 corner while allowing cool inner/outer cores up to 4.80 GHz.
+ */
+#define A2141_BURST_RATIOS_INIT  { 32, 44, 38, 38, 46, 46, 48, 48 }
+#define A2141_HEAVY_RATIOS_INIT  { 29, 35, 33, 33, 36, 36, 38, 38 }
+#define A2141_CORE_EPP_INIT      { \
+    A2141_EPP_BALANCE_POWER,       \
+    A2141_EPP_BALANCE_PERFORMANCE, \
+    A2141_EPP_BALANCE_PERFORMANCE, \
+    A2141_EPP_BALANCE_POWER,       \
+    A2141_EPP_BALANCE_PERFORMANCE, \
+    A2141_EPP_BALANCE_PERFORMANCE, \
+    A2141_EPP_BALANCE_PERFORMANCE, \
+    A2141_EPP_BALANCE_PERFORMANCE  \
+}
+#else
 #define A2141_BURST_RATIOS_INIT  { 32, 43, 38, 38, 45, 45 }
 #define A2141_HEAVY_RATIOS_INIT  { 29, 35, 33, 33, 36, 36 }
 #define A2141_CORE_EPP_INIT      { \
@@ -81,6 +104,7 @@ typedef enum {
     A2141_EPP_BALANCE_PERFORMANCE, \
     A2141_EPP_BALANCE_PERFORMANCE  \
 }
+#endif
 
 /*
  * Shared Telemetry Snapshot exposed via sysctl "machdep.a2141_telemetry".

@@ -51,7 +51,7 @@ static a2141_telemetry_t g_telemetry = {
 static uint32_t g_burst_ratios[A2141_PHYSICAL_CORES]      = A2141_BURST_RATIOS_INIT;
 static uint32_t g_heavy_ratios[A2141_PHYSICAL_CORES]      = A2141_HEAVY_RATIOS_INIT;
 static uint32_t g_core_epp[A2141_PHYSICAL_CORES]          = A2141_CORE_EPP_INIT;
-static uint32_t g_core_actual_ratio[A2141_PHYSICAL_CORES] = { 0, 0, 0, 0, 0, 0 };
+static uint32_t g_core_actual_ratio[A2141_PHYSICAL_CORES] = { 0 };
 static int      g_mode_override                           = -1; /* -1 = Auto, 0 = Burst, 1 = Heavy */
 static volatile uint32_t *g_xcpm_dvfs_paused_ptr          = nullptr;
 static xcpm_dvfs_fn_t     g_xcpm_dvfs_pause_fn            = nullptr;
@@ -164,9 +164,14 @@ static void cpu_enforce_rendezvous(void *arg __unused) {
         }
     }
 
-    /* Clamp ratio to safe architectural bounds [18..45] (1.80 GHz .. 4.50 GHz) */
+    /* Clamp ratio to safe architectural bounds (1.80 GHz .. 4.50 GHz i7 / 5.00 GHz i9) */
+#ifdef A2141_MODEL_I9
+    if (base_ratio < 18U) base_ratio = 18U;
+    if (base_ratio > 50U) base_ratio = 50U;
+#else
     if (base_ratio < 18U) base_ratio = 18U;
     if (base_ratio > 45U) base_ratio = 45U;
+#endif
 
     /* 3. 3-Tier Per-Core Dynamic Thermal Guard (85C / 88C / 91C) */
     uint32_t target_ratio = base_ratio;

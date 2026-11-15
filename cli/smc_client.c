@@ -216,7 +216,11 @@ int a2141_smc_read_snapshot(a2141_smc_snapshot_t *out) {
     }
 
     static const char *core_keys[A2141_PHYSICAL_CORES] = {
+#ifdef A2141_MODEL_I9
+        "TC1C", "TC2C", "TC3C", "TC4C", "TC5C", "TC6C", "TC7C", "TC8C"
+#else
         "TC1C", "TC2C", "TC3C", "TC4C", "TC5C", "TC6C"
+#endif
     };
 
     for (int i = 0; i < A2141_PHYSICAL_CORES; i++) {
