@@ -72,9 +72,11 @@ static int xcpm_set_dvfs_pause(int pause_dvfs) {
 }
 
 /*
- * Proactive closed-loop controller step:
- *   1. Computes proactive minimum fan RPM (F0Mn / F1Mn) from TCXC, Ts0S (Bottom Skin),
- *      Th1H (Fin Stack), and PZ0E (Chassis Power Budget) to eliminate T2's 15s lag.
+ * Intelligent closed-loop controller step:
+ *   1. Computes smart minimum fan RPM (F0Mn / F1Mn) using real CPU/GPU silicon temps,
+ *      rate-of-change (dT/dt) + PHPC power-spike anticipation (reacts in 0.5s to real load),
+ *      and asymmetric slew-rate smoothing (ramps UP fast on load, ramps DOWN gently on idle)
+ *      so fans stay quiet (2200-3100 RPM) during light desktop use instead of screaming at 5500 RPM.
  *   2. Computes dynamic PZ0E-aware RAPL PL1/PL2 limits so PC0R + PG0R never exceeds PZ0E,
  *      preventing AppleSMCPDRC from collapsing CPU_Speed_Limit below 100%.
  *   3. Drives tighter BURST (<=68C) / HEAVY (>=75C) profile hysteresis.
@@ -83,36 +85,82 @@ static void apply_proactive_control_step(const a2141_smc_snapshot_t *smc,
                                          int *io_profile,
                                          int *io_pl1,
                                          float *io_f0_min) {
-    /* 1. Proactive Dual-Turbine Curve */
-    double skin_eff   = 58.0 + (smc->bottom_skin_c - 38.0) * 3.2;
-    double fin_eff    = smc->fin_stack_c + 14.0;
-    double budget_eff = (smc->chassis_max_w > 10.0 && smc->chassis_max_w < 76.0)
-                        ? (60.0 + (76.0 - smc->chassis_max_w) * 0.85)
-                        : 50.0;
+    /* 1. Intelligent Predictive & Asymmetric Dual-Turbine Controller */
+    static double s_ema_temp = 0.0;
+    static double s_prev_ema = 0.0;
+    static float  s_smooth_f0 = A2141_FAN0_STOCK_MIN_RPM;
 
-    double ctrl_temp = smc->peci_max_c;
-    if (skin_eff > ctrl_temp)   ctrl_temp = skin_eff;
-    if (fin_eff > ctrl_temp)    ctrl_temp = fin_eff;
-    if (budget_eff > ctrl_temp) ctrl_temp = budget_eff;
+    double cpu_t = smc->peci_max_c;
+    double gpu_t = (smc->gpu_temp_c > 20.0) ? (smc->gpu_temp_c * 0.94) : 0.0;
+    double base_temp = (cpu_t > gpu_t) ? cpu_t : gpu_t;
 
-    float target_f0 = A2141_FAN0_STOCK_MIN_RPM;
-    float target_f1 = A2141_FAN1_STOCK_MIN_RPM;
-
-    if (ctrl_temp <= 58.0) {
-        target_f0 = A2141_FAN0_STOCK_MIN_RPM;
-        target_f1 = A2141_FAN1_STOCK_MIN_RPM;
-    } else if (ctrl_temp >= 80.0) {
-        target_f0 = A2141_FAN0_MAX_RPM;
-        target_f1 = A2141_FAN1_MAX_RPM;
+    if (s_ema_temp <= 0.0) {
+        s_ema_temp = base_temp;
+        s_prev_ema = base_temp;
     } else {
-        double frac = (ctrl_temp - 58.0) / (80.0 - 58.0);
-        target_f0 = (float)(2300.0 + frac * (A2141_FAN0_MAX_RPM - 2300.0));
-        target_f1 = (float)(2120.0 + frac * (A2141_FAN1_MAX_RPM - 2120.0));
+        s_prev_ema = s_ema_temp;
+        s_ema_temp = s_ema_temp * 0.65 + base_temp * 0.35;
     }
 
-    if (fabsf(target_f0 - *io_f0_min) >= 60.0f) {
-        if (a2141_smc_set_min_fans(target_f0, target_f1) == 0) {
-            *io_f0_min = target_f0;
+    /* Rate of temperature rise (°C per second, loop runs every 0.5s) */
+    double dt_per_sec = (s_ema_temp - s_prev_ema) * 2.0;
+    double power_total = ((smc->cpu_power_w > 0.0) ? smc->cpu_power_w : 0.0) +
+                         ((smc->gpu_power_w > 0.0) ? smc->gpu_power_w : 0.0);
+
+    /* Predictive lead ONLY when real load/heat is surging (eliminates T2 15s lag) */
+    double lead_c = 0.0;
+    if (dt_per_sec > 0.8) {
+        lead_c += (dt_per_sec - 0.8) * 2.5;
+        if (lead_c > 7.0) lead_c = 7.0;
+    }
+    if (power_total > 42.0) {
+        double p_lead = (power_total - 42.0) * 0.22;
+        if (p_lead > 6.0) p_lead = 6.0;
+        lead_c += p_lead;
+    }
+
+    /* Chassis & heatsink guard only if genuinely hot (normal 44-45C skin won't max out fans) */
+    double skin_eff = (smc->bottom_skin_c > 46.5) ? (70.0 + (smc->bottom_skin_c - 46.5) * 4.0) : 0.0;
+    double fin_eff  = (smc->fin_stack_c > 68.0)   ? (smc->fin_stack_c + 8.0) : 0.0;
+
+    double ctrl_temp = s_ema_temp + lead_c;
+    if (skin_eff > ctrl_temp) ctrl_temp = skin_eff;
+    if (fin_eff  > ctrl_temp) ctrl_temp = fin_eff;
+
+    float target_f0 = A2141_FAN0_STOCK_MIN_RPM;
+    if (ctrl_temp <= 58.0) {
+        target_f0 = A2141_FAN0_STOCK_MIN_RPM; /* 1836 RPM silent idle */
+    } else if (ctrl_temp <= 70.0) {
+        /* Light desktop / external monitor: 2200 -> 3100 RPM (quiet & effective) */
+        double frac = (ctrl_temp - 58.0) / 12.0;
+        target_f0 = (float)(2200.0 + frac * 900.0);
+    } else if (ctrl_temp <= 82.0) {
+        /* Active compile / gaming / 3D: 3100 -> 4450 RPM */
+        double frac = (ctrl_temp - 70.0) / 12.0;
+        target_f0 = (float)(3100.0 + frac * 1350.0);
+    } else if (ctrl_temp < 90.0) {
+        /* Heavy sustained load: 4450 -> 5600 RPM */
+        double frac = (ctrl_temp - 82.0) / 8.0;
+        target_f0 = (float)(4450.0 + frac * (A2141_FAN0_MAX_RPM - 4450.0));
+    } else {
+        target_f0 = A2141_FAN0_MAX_RPM;
+    }
+
+    /* Asymmetric slew-rate limiter: ramp UP fast (+250 RPM/tick), ramp DOWN gently (-60 RPM/tick) */
+    if (target_f0 > s_smooth_f0) {
+        float diff = target_f0 - s_smooth_f0;
+        s_smooth_f0 += (diff > 250.0f) ? 250.0f : diff;
+    } else if (target_f0 < s_smooth_f0) {
+        float diff = s_smooth_f0 - target_f0;
+        s_smooth_f0 -= (diff > 60.0f) ? 60.0f : diff;
+    }
+
+    float target_f1 = s_smooth_f0 * (A2141_FAN1_MAX_RPM / A2141_FAN0_MAX_RPM);
+    if (target_f1 < A2141_FAN1_STOCK_MIN_RPM) target_f1 = A2141_FAN1_STOCK_MIN_RPM;
+
+    if (fabsf(s_smooth_f0 - *io_f0_min) >= 60.0f) {
+        if (a2141_smc_set_min_fans(s_smooth_f0, target_f1) == 0) {
+            *io_f0_min = s_smooth_f0;
         }
     }
 
