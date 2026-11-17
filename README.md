@@ -232,8 +232,9 @@ Esto detiene el servicio, descarga el driver, devuelve el control de energía y 
 
 ## Apoyo al proyecto y contacto
 
-Comparto este trabajo de manera libre por si a alguien con esta misma MacBook le sirve para trabajar más cómodo y cuidar su equipo. Si te ayudó a bajar las temperaturas o quieres apoyar el mantenimiento de mis herramientas abiertas:
+Comparto este trabajo de manera libre y con humildad por si a alguien con esta misma MacBook le sirve para trabajar más cómodo y cuidar su equipo. Si te fue de utilidad, **dejar una estrella (Star) en el repositorio** es la forma más simple de apoyar y ayudar a que otras personas con el mismo equipo lo encuentren:
 
+- **Estrella en GitHub:** Presiona **Star** arriba a la derecha en este repositorio
 - **GitHub Sponsors:** [github.com/sponsors/mylnzon58](https://github.com/sponsors/mylnzon58)
 - **Patreon:** [patreon.com/JuanjoClassic](https://www.patreon.com/JuanjoClassic)
 - **Invitar un Tecito:** [tecito.app/juanjoclassic](https://tecito.app/juanjoclassic)
